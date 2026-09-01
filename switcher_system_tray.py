@@ -1,5 +1,6 @@
 import threading
 import time
+from typing import Optional
 
 import pythoncom
 import pystray
@@ -11,16 +12,51 @@ from monitorcontrol import get_monitors, InputSource
 
 HUB_ID = r"USB\VID_05E3&PID_0626\5&21296CF&0&17"
 
+POLL_INTERVAL_SEC = 0.5
+DEBOUNCE_CONFIRM_SEC = 0.25
+DEBOUNCE_SETTLE_SEC = 0.5
+
 
 # ----------------------------
 # State
 # ----------------------------
 
-current_state = None
+current_state: Optional[bool] = None
 state_lock = threading.Lock()
 
-tray_icon = None
+tray_icon: Optional[pystray.Icon] = None
 stop_event = threading.Event()
+
+
+# ----------------------------
+# Helpers
+# ----------------------------
+
+def mode_name(hub_connected: bool) -> str:
+    return "PC" if hub_connected else "Mac"
+
+
+def hub_connected(wmi) -> bool:
+    devices = wmi.ExecQuery(
+        "SELECT DeviceID FROM Win32_PnPEntity "
+        "WHERE PNPClass = 'USB'"
+    )
+
+    return any(device.DeviceID == HUB_ID for device in devices)
+
+
+def confirm_state_change(wmi, last_state: bool) -> Optional[bool]:
+    """Re-check hub state after debounce delays; return new state or None."""
+    time.sleep(DEBOUNCE_CONFIRM_SEC)
+    if hub_connected(wmi) == last_state:
+        return None
+
+    time.sleep(DEBOUNCE_SETTLE_SEC)
+    new_state = hub_connected(wmi)
+    if new_state == last_state:
+        return None
+
+    return new_state
 
 
 # ----------------------------
@@ -29,26 +65,11 @@ stop_event = threading.Event()
 
 def create_icon():
     image = Image.new("RGB", (64, 64), "white")
-
     draw = ImageDraw.Draw(image)
 
-    draw.rectangle(
-        (8, 8, 56, 44),
-        outline="black",
-        width=4
-    )
-
-    draw.line(
-        (24, 52, 40, 52),
-        fill="black",
-        width=4
-    )
-
-    draw.line(
-        (32, 44, 32, 52),
-        fill="black",
-        width=4
-    )
+    draw.rectangle((8, 8, 56, 44), outline="black", width=4)
+    draw.line((24, 52, 40, 52), fill="black", width=4)
+    draw.line((32, 44, 32, 52), fill="black", width=4)
 
     return image
 
@@ -60,35 +81,26 @@ def update_tray():
     with state_lock:
         state = current_state
 
-    mode = "PC" if state else "Mac"
-
-    tray_icon.title = f"Monitor Switcher — {mode}"
+    tray_icon.title = f"Monitor Switcher — {mode_name(state)}"
 
 
-def get_status_text(item):
+def get_status_text(_item):
     with state_lock:
         state = current_state
 
-    return f"Status: {'PC' if state else 'Mac'}"
+    return f"Status: {mode_name(state)}"
 
 
-def exit_app(icon, item):
+def exit_app(icon, _item):
     stop_event.set()
     icon.stop()
 
 
 def create_menu():
     return pystray.Menu(
-        pystray.MenuItem(
-            get_status_text,
-            None,
-            enabled=False
-        ),
+        pystray.MenuItem(get_status_text, None, enabled=False),
         pystray.Menu.SEPARATOR,
-        pystray.MenuItem(
-            "Exit",
-            exit_app
-        )
+        pystray.MenuItem("Exit", exit_app),
     )
 
 
@@ -116,6 +128,16 @@ def set_mac_inputs(monitor1, monitor2):
         monitor2.set_input_source(InputSource.DVI1)
 
 
+def apply_input_switch(is_pc: bool, monitor1, monitor2) -> None:
+    try:
+        if is_pc:
+            set_pc_inputs(monitor1, monitor2)
+        else:
+            set_mac_inputs(monitor1, monitor2)
+    except Exception as exc:
+        print(f"Failed to switch monitors: {exc}")
+
+
 # ----------------------------
 # USB watcher
 # ----------------------------
@@ -123,88 +145,43 @@ def set_mac_inputs(monitor1, monitor2):
 def watch_usb():
     global current_state
 
-    # COM must be initialized in this thread
     pythoncom.CoInitialize()
 
     try:
-        # Create WMI connection inside this thread
         wmi = win32com.client.GetObject("winmgmts:")
-
-        # Create monitor objects inside this thread
         monitors = get_monitors()
+
+        if len(monitors) < 2:
+            print(f"Expected at least 2 monitors, found {len(monitors)}")
+            return
 
         monitor1 = monitors[0]
         monitor2 = monitors[1]
 
-        def hub_connected():
-            devices = wmi.ExecQuery(
-                "SELECT DeviceID FROM Win32_PnPEntity "
-                "WHERE PNPClass = 'USB'"
-            )
-
-            return any(
-                device.DeviceID == HUB_ID
-                for device in devices
-            )
-
-        # Get initial state
-        last_state = hub_connected()
+        last_state = hub_connected(wmi)
 
         with state_lock:
             current_state = last_state
 
-        print(
-            f"USB switch: {'PC' if last_state else 'Mac'}"
-        )
-
+        print(f"USB switch: {mode_name(last_state)}")
         update_tray()
 
-        # Watch for changes
         while not stop_event.is_set():
+            if hub_connected(wmi) != last_state:
+                new_state = confirm_state_change(wmi, last_state)
+                if new_state is not None:
+                    print(f"\nUSB switch → {mode_name(new_state)}")
+                    apply_input_switch(new_state, monitor1, monitor2)
 
-            current_state_detected = hub_connected()
+                    last_state = new_state
 
-            if current_state_detected != last_state:
+                    with state_lock:
+                        current_state = last_state
 
-                # Give Windows time to finish
-                # the USB transition
-                time.sleep(0.25)
+                    update_tray()
 
-                current_state_detected = hub_connected()
-
-                if current_state_detected != last_state:
-
-                    # Debounce
-                    time.sleep(0.5)
-
-                    current_state_detected = hub_connected()
-
-                    if current_state_detected != last_state:
-
-                        if current_state_detected:
-                            print("\nUSB switch → PC")
-
-                            set_pc_inputs(
-                                monitor1,
-                                monitor2
-                            )
-
-                        else:
-                            print("\nUSB switch → Mac")
-
-                            set_mac_inputs(
-                                monitor1,
-                                monitor2
-                            )
-
-                        last_state = current_state_detected
-
-                        with state_lock:
-                            current_state = last_state
-
-                        update_tray()
-
-            time.sleep(0.5)
+            if stop_event.wait(POLL_INTERVAL_SEC):
+                break
 
     finally:
         pythoncom.CoUninitialize()
@@ -215,19 +192,14 @@ def watch_usb():
 # ----------------------------
 
 if __name__ == "__main__":
-
     tray_icon = pystray.Icon(
         "MonitorSwitcher",
         create_icon(),
         "Monitor Switcher",
-        create_menu()
+        create_menu(),
     )
 
-    watcher_thread = threading.Thread(
-        target=watch_usb,
-        daemon=True
-    )
-
+    watcher_thread = threading.Thread(target=watch_usb, daemon=True)
     watcher_thread.start()
 
     tray_icon.run()
