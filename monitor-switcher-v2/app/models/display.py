@@ -8,15 +8,15 @@ class InputType(Enum):
     DVI = "DVI"
 
 
-# This represents the inputs that the monitor can take
 @dataclass
 class DisplayInput:
     input_id: str
     input_type: InputType
 
-# This represents a display/monitor/screen
+
 @dataclass
 class Display:
     id: str
     name: str
+    windows_device_id: str
     inputs: list[DisplayInput]
