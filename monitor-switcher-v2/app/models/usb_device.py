@@ -1,8 +1,14 @@
 from dataclasses import dataclass
 
-# This represents a usb device. In my case its a usb-hub/switch.
+# This represents any USB device that is connected but not configured.
 @dataclass
 class UsbDevice:
-    id: str
     windows_device_id: str
     name: str
+
+# This represents a USB device that has been configured in the app
+@dataclass
+class ConfiguredUsbDevice:
+    id: str
+    windows_device_id: str
+    nickname: str
