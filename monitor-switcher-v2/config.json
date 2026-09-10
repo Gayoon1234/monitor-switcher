@@ -1,0 +1,9 @@
+{
+    "usb_devices": [
+        {
+            "id": "usb-001",
+            "windows_device_id": "USB\\VID_05E3&PID_0626\\5&21296CF&0&17",
+            "nickname": "Monitor Switch"
+        }
+    ]
+}

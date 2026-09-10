@@ -20,3 +20,4 @@ class Display:
     name: str
     windows_device_id: str
     inputs: list[DisplayInput]
+    current_input: str | None = None
