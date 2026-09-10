@@ -72,9 +72,18 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
 
         return result
 
-    def _get_current_input(self, monitor, inputs: list[DisplayInput]) -> str | None:
-        with monitor:
-            value = monitor.get_input_source()
+    def _get_current_input(
+        self,
+        monitor,
+        inputs: list[DisplayInput],
+    ) -> str | None:
+
+        try:
+            with monitor:
+                value = monitor.get_input_source()
+
+        except Exception:
+            return None
 
         input_map = {
             1: "DVI1",

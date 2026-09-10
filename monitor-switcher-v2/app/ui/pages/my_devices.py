@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.widgets.display_card import DisplayCard
+from app.ui.widgets.usb_device_card import UsbDeviceCard
 
 
 class MyDevicesPage(QWidget):
@@ -36,13 +37,20 @@ class MyDevicesPage(QWidget):
             )
 
         layout.addWidget(QLabel("USB Devices"))
+        configured_devices = self.usb_service.get_configured_devices()
+        connected_devices = self.usb_service.get_devices()
 
-        usb_devices = self.usb_service.get_configured_devices()
+        connected_ids = {
+            device.windows_device_id
+            for device in connected_devices
+        }
 
-        for device in usb_devices:
+        for device in configured_devices:
+            connected = device.windows_device_id in connected_ids
+
             layout.addWidget(
-                QLabel(
-                    f"{device.nickname}\n"
-                    f"Device ID: {device.windows_device_id}"
+                UsbDeviceCard(
+                    device,
+                    connected,
                 )
             )

@@ -4,20 +4,40 @@ from PySide6.QtWidgets import QApplication
 
 from app.hardware.windows_monitor import WindowsMonitorController
 from app.hardware.windows_usb import WindowsUsbDeviceMonitor
+
 from app.services.config_repository import ConfigRepository
 from app.services.display_service import DisplayService
 from app.services.usb_service import UsbService
+from app.services.automation_service import AutomationService
+from app.services.usb_monitor_service import UsbMonitorService
+
+from app.models.automation import (
+    Action,
+    ActionType,
+    Automation,
+    Trigger,
+    TriggerType,
+)
+
 from app.ui.main_window import MainWindow
 
 
+# -------------------------
+# Hardware
+# -------------------------
+
 monitor_controller = WindowsMonitorController()
+usb_monitor = WindowsUsbDeviceMonitor()
+
+
+# -------------------------
+# Services
+# -------------------------
 
 display_service = DisplayService(
     monitor_controller=monitor_controller,
     display_discovery=monitor_controller,
 )
-
-usb_monitor = WindowsUsbDeviceMonitor()
 
 repository = ConfigRepository()
 
@@ -27,7 +47,88 @@ usb_service = UsbService(
 )
 
 
+# -------------------------
+# Automations
+# -------------------------
+
+automations = [
+    Automation(
+        id="automation-001",
+        name="Switch to PC",
+        enabled=True,
+        trigger=Trigger(
+            type=TriggerType.DEVICE_CONNECTED,
+            device_id="USB\\VID_05E3&PID_0626\\5&21296CF&0&17",
+        ),
+        actions=[
+            Action(
+                type=ActionType.SWITCH_INPUT,
+                display_id="display-001",
+                input_id="HDMI1",
+            ),
+            Action(
+                type=ActionType.SWITCH_INPUT,
+                display_id="display-002",
+                input_id="ANALOG1",
+            ),
+        ],
+    ),
+
+    Automation(
+        id="automation-002",
+        name="Switch to Mac",
+        enabled=True,
+        trigger=Trigger(
+            type=TriggerType.DEVICE_DISCONNECTED,
+            device_id="USB\\VID_05E3&PID_0626\\5&21296CF&0&17",
+        ),
+        actions=[
+            Action(
+                type=ActionType.SWITCH_INPUT,
+                display_id="display-001",
+                input_id="ANALOG1",
+            ),
+            Action(
+                type=ActionType.SWITCH_INPUT,
+                display_id="display-002",
+                input_id="DVI1",
+            ),
+        ],
+    ),
+]
+
+
+automation_service = AutomationService(
+    display_service=display_service,
+    automations=automations,
+)
+
+# -------------------------
+# Qt application
+# -------------------------
+
 app = QApplication(sys.argv)
+
+
+# -------------------------
+# USB event monitoring
+# -------------------------
+
+usb_monitor_service = UsbMonitorService(
+    device_monitor=usb_monitor,
+    device_id="USB\\VID_05E3&PID_0626\\5&21296CF&0&17",
+)
+
+usb_monitor_service.device_event.connect(
+    automation_service.handle_device_event
+)
+
+usb_monitor_service.start()
+
+
+# -------------------------
+# Main window
+# -------------------------
 
 window = MainWindow(
     display_service=display_service,
@@ -35,5 +136,10 @@ window = MainWindow(
 )
 
 window.show()
+
+
+# -------------------------
+# Start application
+# -------------------------
 
 sys.exit(app.exec())
