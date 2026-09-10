@@ -1,9 +1,13 @@
+import sys
+
+from PySide6.QtWidgets import QApplication
+
 from app.hardware.windows_monitor import WindowsMonitorController
 from app.hardware.windows_usb import WindowsUsbDeviceMonitor
 from app.services.config_repository import ConfigRepository
 from app.services.display_service import DisplayService
 from app.services.usb_service import UsbService
-from app.models.usb_device import ConfiguredUsbDevice
+from app.ui.main_window import MainWindow
 
 
 monitor_controller = WindowsMonitorController()
@@ -23,44 +27,13 @@ usb_service = UsbService(
 )
 
 
-print("=== Displays ===")
+app = QApplication(sys.argv)
 
-for display in display_service.get_displays():
-    print(display)
-
-
-print()
-print("=== USB Devices ===")
-
-for device in usb_service.get_devices():
-    print(device)
-
-
-print()
-print("=== Configured USB Devices ===")
-
-for device in usb_service.get_configured_devices():
-    print(device)
-
-print()
-print("=== Testing Add ===")
-
-new_device = ConfiguredUsbDevice(
-    id="usb-002",
-    windows_device_id=r"USB\TEST\123",
-    nickname="Test Device",
+window = MainWindow(
+    display_service=display_service,
+    usb_service=usb_service,
 )
 
-usb_service.add_device(new_device)
+window.show()
 
-for device in usb_service.get_configured_devices():
-    print(device)
-
-
-print()
-print("=== Testing Remove ===")
-
-usb_service.remove_device("usb-002")
-
-for device in usb_service.get_configured_devices():
-    print(device)
+sys.exit(app.exec())
