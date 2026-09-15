@@ -1,0 +1,52 @@
+{
+    "events": [
+        {
+            "timestamp": "2026-09-15T21:35:03.132582",
+            "event_type": "device_event",
+            "message": "Device disconnected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:35:03.133361",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to Mac",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:35:03.199010",
+            "event_type": "action",
+            "message": "display-001 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:35:03.262715",
+            "event_type": "action",
+            "message": "display-002 \u2192 DVI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:37:52.566958",
+            "event_type": "device_event",
+            "message": "Device connected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:37:52.573181",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to PC",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:37:52.641004",
+            "event_type": "action",
+            "message": "display-001 \u2192 HDMI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:37:52.703783",
+            "event_type": "action",
+            "message": "display-002 \u2192 ANALOG1",
+            "success": true
+        }
+    ]
+}

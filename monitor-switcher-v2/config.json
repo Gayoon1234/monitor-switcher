@@ -1,0 +1,46 @@
+{
+    "automations": [
+        {
+            "id": "automation-001",
+            "name": "Switch to PC",
+            "enabled": true,
+            "trigger": {
+                "type": "device_connected",
+                "device_id": "USB\\VID_05E3&PID_0626\\5&21296CF&0&17"
+            },
+            "actions": [
+                {
+                    "type": "switch_input",
+                    "display_id": "display-001",
+                    "input_id": "HDMI1"
+                },
+                {
+                    "type": "switch_input",
+                    "display_id": "display-002",
+                    "input_id": "ANALOG1"
+                }
+            ]
+        },
+        {
+            "id": "automation-002",
+            "name": "Switch to Mac",
+            "enabled": true,
+            "trigger": {
+                "type": "device_disconnected",
+                "device_id": "USB\\VID_05E3&PID_0626\\5&21296CF&0&17"
+            },
+            "actions": [
+                {
+                    "type": "switch_input",
+                    "display_id": "display-001",
+                    "input_id": "ANALOG1"
+                },
+                {
+                    "type": "switch_input",
+                    "display_id": "display-002",
+                    "input_id": "DVI1"
+                }
+            ]
+        }
+    ]
+}
