@@ -11,16 +11,7 @@ from app.services.usb_service import UsbService
 from app.services.automation_service import AutomationService
 from app.services.usb_monitor_service import UsbMonitorService
 
-from app.models.automation import (
-    Action,
-    ActionType,
-    Automation,
-    Trigger,
-    TriggerType,
-)
-
 from app.ui.main_window import MainWindow
-
 
 # -------------------------
 # Hardware
@@ -51,57 +42,13 @@ usb_service = UsbService(
 # Automations
 # -------------------------
 
-automations = [
-    Automation(
-        id="automation-001",
-        name="Switch to PC",
-        enabled=True,
-        trigger=Trigger(
-            type=TriggerType.DEVICE_CONNECTED,
-            device_id="USB\\VID_05E3&PID_0626\\5&21296CF&0&17",
-        ),
-        actions=[
-            Action(
-                type=ActionType.SWITCH_INPUT,
-                display_id="display-001",
-                input_id="HDMI1",
-            ),
-            Action(
-                type=ActionType.SWITCH_INPUT,
-                display_id="display-002",
-                input_id="ANALOG1",
-            ),
-        ],
-    ),
-
-    Automation(
-        id="automation-002",
-        name="Switch to Mac",
-        enabled=True,
-        trigger=Trigger(
-            type=TriggerType.DEVICE_DISCONNECTED,
-            device_id="USB\\VID_05E3&PID_0626\\5&21296CF&0&17",
-        ),
-        actions=[
-            Action(
-                type=ActionType.SWITCH_INPUT,
-                display_id="display-001",
-                input_id="ANALOG1",
-            ),
-            Action(
-                type=ActionType.SWITCH_INPUT,
-                display_id="display-002",
-                input_id="DVI1",
-            ),
-        ],
-    ),
-]
-
+automations = repository.load_automations()
 
 automation_service = AutomationService(
     display_service=display_service,
     automations=automations,
 )
+
 
 # -------------------------
 # Qt application
