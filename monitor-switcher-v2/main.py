@@ -10,6 +10,7 @@ from app.services.display_service import DisplayService
 from app.services.usb_service import UsbService
 from app.services.automation_service import AutomationService
 from app.services.usb_monitor_service import UsbMonitorService
+from app.services.activity_repository import ActivityRepository
 
 from app.ui.main_window import MainWindow
 
@@ -31,6 +32,7 @@ display_service = DisplayService(
 )
 
 repository = ConfigRepository()
+activity_repository = ActivityRepository()
 
 usb_service = UsbService(
     device_monitor=usb_monitor,
@@ -47,6 +49,7 @@ automations = repository.load_automations()
 automation_service = AutomationService(
     display_service=display_service,
     automations=automations,
+    activity_repository=activity_repository
 )
 
 
@@ -81,6 +84,11 @@ window = MainWindow(
     display_service=display_service,
     usb_service=usb_service,
     repository=repository,
+    automation_service=automation_service
+)
+
+automation_service.activity_event.connect(
+    window.activity_page.add_event
 )
 
 window.show()
