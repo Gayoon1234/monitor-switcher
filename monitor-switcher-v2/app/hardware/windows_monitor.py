@@ -32,6 +32,8 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
 
     def get_displays(self) -> list[Display]:
         wmi = win32com.client.GetObject("winmgmts:")
+        
+        # Win32_DesktopMonitor does not detect my beloved hp w1907, so PnPEntity it is.
         devices = wmi.InstancesOf("Win32_PnPEntity")
 
         result = []
