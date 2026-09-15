@@ -7,11 +7,12 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.pages.my_devices import MyDevicesPage
+from app.ui.pages.automations import AutomationsPage
 
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, display_service, usb_service):
+    def __init__(self, display_service, usb_service, repository):
         super().__init__()
 
         self.setWindowTitle("Monitor Switcher")
@@ -19,6 +20,7 @@ class MainWindow(QMainWindow):
 
         self.display_service = display_service
         self.usb_service = usb_service
+        self.repository = repository
 
         self._setup_ui()
 
@@ -45,7 +47,9 @@ class MainWindow(QMainWindow):
         )
 
         self.pages.addWidget(QWidget())
-        self.pages.addWidget(QWidget())
+        self.pages.addWidget(
+            AutomationsPage(self.repository)
+        )
         self.pages.addWidget(QWidget())
         self.pages.addWidget(QWidget())
 

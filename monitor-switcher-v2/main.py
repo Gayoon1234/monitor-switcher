@@ -80,6 +80,7 @@ usb_monitor_service.start()
 window = MainWindow(
     display_service=display_service,
     usb_service=usb_service,
+    repository=repository,
 )
 
 window.show()
