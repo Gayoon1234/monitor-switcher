@@ -2,6 +2,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -50,15 +51,16 @@ class ActivityPage(QWidget):
             "font-size: 24px; font-weight: bold;"
         )
 
-        self.layout.addWidget(title)
-
         self.activity_container = QVBoxLayout()
 
-        self.layout.addLayout(
-            self.activity_container
-        )
+        scroll_content = QWidget()
+        scroll_content.setLayout(self.activity_container)
 
-        self.layout.addStretch()
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(scroll_content)
+
+        self.layout.addWidget(scroll_area)
 
     def add_event(self, event):
         item = ActivityItem(event)

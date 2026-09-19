@@ -30,6 +30,8 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout(container)
 
         self.sidebar = QListWidget()
+        self.sidebar.setFixedWidth(150)
+        
         self.sidebar.addItems([
             "My Devices",
             "Find My Device",
