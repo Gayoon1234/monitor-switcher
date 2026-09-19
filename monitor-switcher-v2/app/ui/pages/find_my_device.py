@@ -1,6 +1,9 @@
-from PySide6.QtCore import QTimer
+import uuid
+
+from PySide6.QtCore import QTimer, Qt
 
 from PySide6.QtWidgets import (
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -8,6 +11,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from app.models.usb_device import ConfiguredUsbDevice
+from app.ui.widgets.usb_device_card import UsbDeviceCard
 
 
 class FindMyDevicePage(QWidget):
@@ -69,21 +75,53 @@ class FindMyDevicePage(QWidget):
         )
 
         device_container = QWidget()
-        device_layout = QVBoxLayout(device_container)
+        device_layout = QGridLayout(device_container)
+        device_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
 
         devices = self.usb_service.get_devices()
+        configured_devices = self.usb_service.get_configured_devices()
+
+        configured_devices_by_windows_id = {
+            device.windows_device_id: device
+            for device in configured_devices
+        }
+
+        columns = 3
 
         if not devices:
             device_layout.addWidget(
-                QLabel("No USB devices found.")
+                QLabel("No USB devices found."),
+                0,
+                0,
             )
         else:
-            for device in devices:
-                device_layout.addWidget(
-                    QLabel(
-                        f"{device.name}\n"
-                        f"{device.windows_device_id}"
+            for index, device in enumerate(devices):
+                row = index // columns
+                column = index % columns
+
+                configured_device = (
+                    configured_devices_by_windows_id.get(
+                        device.windows_device_id
                     )
+                )
+
+                card = UsbDeviceCard(
+                    device,
+                    configured_device=configured_device,
+                    connected=True,
+                )
+
+                card.setFixedWidth(250)
+
+                if configured_device is None:
+                    card.add_device_requested.connect(
+                        self._add_device
+                    )
+
+                device_layout.addWidget(
+                    card,
+                    row,
+                    column,
                 )
 
         scroll_area = QScrollArea()
@@ -209,15 +247,16 @@ class FindMyDevicePage(QWidget):
             "Status: Device detected"
         )
 
-        self.detected_device_layout.addWidget(
-            QLabel(
-                f"Name\n"
-                f"{device.name}\n\n"
-                f"Windows Device ID\n"
-                f"{device.windows_device_id}"
-            )
+        card = UsbDeviceCard(device)
+
+        card.add_device_requested.connect(
+            self._add_device
         )
 
+        self.detected_device_layout.addWidget(
+            card
+        )
+        
     def _stop_detection(self):
         self.timer.stop()
         self.detecting = False
@@ -248,3 +287,16 @@ class FindMyDevicePage(QWidget):
             self._stop_detection()
         else:
             self._start_detection()
+
+    def _add_device(self, device, nickname):
+        configured_device = ConfiguredUsbDevice(
+            id=str(uuid.uuid4()),
+            windows_device_id=device.windows_device_id,
+            nickname=nickname,
+        )
+
+        self.usb_service.add_device(
+            configured_device
+        )
+
+        self._show_all_devices()

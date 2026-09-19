@@ -29,7 +29,7 @@ class MyDevicesPage(QWidget):
         displays = self.display_service.get_displays()
 
         for display in displays:
-           layout.addWidget(
+            layout.addWidget(
                 DisplayCard(
                     display,
                     self.display_service,
@@ -37,20 +37,39 @@ class MyDevicesPage(QWidget):
             )
 
         layout.addWidget(QLabel("USB Devices"))
-        configured_devices = self.usb_service.get_configured_devices()
-        connected_devices = self.usb_service.get_devices()
 
-        connected_ids = {
-            device.windows_device_id
+        configured_devices = (
+            self.usb_service.get_configured_devices()
+        )
+
+        connected_devices = (
+            self.usb_service.get_devices()
+        )
+
+        connected_devices_by_id = {
+            device.windows_device_id: device
             for device in connected_devices
         }
 
-        for device in configured_devices:
-            connected = device.windows_device_id in connected_ids
-
-            layout.addWidget(
-                UsbDeviceCard(
-                    device,
-                    connected,
+        for configured_device in configured_devices:
+            connected_device = (
+                connected_devices_by_id.get(
+                    configured_device.windows_device_id
                 )
             )
+
+            connected = connected_device is not None
+
+            device = (
+                connected_device
+                if connected_device is not None
+                else configured_device
+            )
+
+            card = UsbDeviceCard(
+                device,
+                configured_device=configured_device,
+                connected=connected,
+            )
+
+            layout.addWidget(card)
