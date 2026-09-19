@@ -13,10 +13,23 @@ class WindowsUsbDeviceMonitor(UsbDeviceMonitor):
         result = []
 
         for device in devices:
+
+            ## TODO: make this method take filters
+
+            # remove this check if you want to see all devices the pc knows about.
+            # Including devices that are not currently connected.
+            if not device.Present:
+                continue
+
             device_id = device.DeviceID
 
             if not device_id:
                 continue
+
+                        ## only include USB devices
+            if not device_id.startswith("USB\\"):
+                continue
+
 
             result.append(
                 UsbDevice(
