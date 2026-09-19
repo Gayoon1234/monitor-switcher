@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 from app.ui.pages.my_devices import MyDevicesPage
 from app.ui.pages.automations import AutomationsPage
 from app.ui.pages.activity import ActivityPage
+from app.ui.pages.find_my_device import FindMyDevicePage
 
 class MainWindow(QMainWindow):
 
@@ -31,7 +32,7 @@ class MainWindow(QMainWindow):
 
         self.sidebar = QListWidget()
         self.sidebar.setFixedWidth(150)
-        
+
         self.sidebar.addItems([
             "My Devices",
             "Find My Device",
@@ -49,7 +50,10 @@ class MainWindow(QMainWindow):
             )
         )
 
-        self.pages.addWidget(QWidget())
+        self.pages.addWidget(
+            FindMyDevicePage(self.usb_service)
+        )
+        
         self.pages.addWidget(
             AutomationsPage(self.repository)
         )
