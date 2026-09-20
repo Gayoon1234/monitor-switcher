@@ -18,8 +18,9 @@ class MyDevicesPage(QWidget):
 
         self._setup_ui()
 
-    def _setup_ui(self):
-        layout = QVBoxLayout(self)
+    def _setup_ui(self, layout=None):
+        if layout is None:
+            layout = QVBoxLayout(self)
 
         title = QLabel("My Devices")
         layout.addWidget(title)
@@ -72,4 +73,31 @@ class MyDevicesPage(QWidget):
                 connected=connected,
             )
 
+            card.edit_device_requested.connect(
+                self._edit_device
+            )
+
+            card.delete_device_requested.connect(
+                self._delete_device
+            )
+
             layout.addWidget(card)
+
+    def _edit_device(self, device):
+        self.usb_service.update_device(device)
+        self._refresh()
+
+    def _delete_device(self, device):
+        self.usb_service.remove_device(device.id)
+        self._refresh()
+
+    def _refresh(self):
+        layout = self.layout()
+
+        while layout.count():
+            item = layout.takeAt(0)
+
+            if item.widget():
+                item.widget().deleteLater()
+
+        self._setup_ui(layout)

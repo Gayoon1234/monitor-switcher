@@ -22,6 +22,7 @@ class FindMyDevicePage(QWidget):
         super().__init__()
 
         self.usb_service = usb_service
+
         self.detecting = False
         self.initial_device_ids = set()
 
@@ -66,6 +67,10 @@ class FindMyDevicePage(QWidget):
 
         self._show_all_devices()
 
+    # ------------------------------------------------------------------
+    # All Devices
+    # ------------------------------------------------------------------
+
     def _show_all_devices(self):
         self._stop_detection()
         self._clear_content()
@@ -75,11 +80,16 @@ class FindMyDevicePage(QWidget):
         )
 
         device_container = QWidget()
+
         device_layout = QGridLayout(device_container)
-        device_layout.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        device_layout.setAlignment(
+            Qt.AlignLeft | Qt.AlignTop
+        )
 
         devices = self.usb_service.get_devices()
-        configured_devices = self.usb_service.get_configured_devices()
+        configured_devices = (
+            self.usb_service.get_configured_devices()
+        )
 
         configured_devices_by_windows_id = {
             device.windows_device_id: device
@@ -94,8 +104,10 @@ class FindMyDevicePage(QWidget):
                 0,
                 0,
             )
+
         else:
             for index, device in enumerate(devices):
+
                 row = index // columns
                 column = index % columns
 
@@ -117,6 +129,14 @@ class FindMyDevicePage(QWidget):
                     card.add_device_requested.connect(
                         self._add_device
                     )
+                else:
+                    card.edit_device_requested.connect(
+                        self._edit_device
+                    )
+
+                    card.delete_device_requested.connect(
+                        self._delete_device
+                    )
 
                 device_layout.addWidget(
                     card,
@@ -133,6 +153,7 @@ class FindMyDevicePage(QWidget):
         )
 
         refresh_button = QPushButton("Refresh")
+
         refresh_button.clicked.connect(
             self._show_all_devices
         )
@@ -143,6 +164,10 @@ class FindMyDevicePage(QWidget):
 
         self.content_layout.addStretch()
 
+    # ------------------------------------------------------------------
+    # Detect New Device
+    # ------------------------------------------------------------------
+
     def _show_detection(self):
         self._stop_detection()
         self._clear_content()
@@ -152,6 +177,7 @@ class FindMyDevicePage(QWidget):
         )
 
         detection_container = QWidget()
+
         detection_layout = QVBoxLayout(
             detection_container
         )
@@ -159,7 +185,8 @@ class FindMyDevicePage(QWidget):
         detection_layout.addWidget(
             QLabel(
                 "Connect the USB device you want to add.\n"
-                'If it\'s already connected, disconnect it before selecting "Start Detecting".'
+                "If it's already connected, disconnect it "
+                'before selecting "Start Detecting".'
             )
         )
 
@@ -201,7 +228,12 @@ class FindMyDevicePage(QWidget):
             scroll_area
         )
 
+    # ------------------------------------------------------------------
+    # Detection
+    # ------------------------------------------------------------------
+
     def _start_detection(self):
+        # Take a fresh snapshot when detection starts.
         devices = self.usb_service.get_devices()
 
         self.initial_device_ids = {
@@ -228,6 +260,7 @@ class FindMyDevicePage(QWidget):
         devices = self.usb_service.get_devices()
 
         for device in devices:
+
             if (
                 device.windows_device_id
                 not in self.initial_device_ids
@@ -247,7 +280,14 @@ class FindMyDevicePage(QWidget):
             "Status: Device detected"
         )
 
-        card = UsbDeviceCard(device)
+        # A detected device is, by definition, not configured yet.
+        card = UsbDeviceCard(
+            device,
+            configured_device=None,
+            connected=True,
+        )
+
+        card.setFixedWidth(250)
 
         card.add_device_requested.connect(
             self._add_device
@@ -256,9 +296,10 @@ class FindMyDevicePage(QWidget):
         self.detected_device_layout.addWidget(
             card
         )
-        
+
     def _stop_detection(self):
         self.timer.stop()
+
         self.detecting = False
 
         if self.detect_button is not None:
@@ -271,8 +312,19 @@ class FindMyDevicePage(QWidget):
                 "Status: Ready"
             )
 
+    def _toggle_detection(self):
+        if self.detecting:
+            self._stop_detection()
+        else:
+            self._start_detection()
+
+    # ------------------------------------------------------------------
+    # UI Cleanup
+    # ------------------------------------------------------------------
+
     def _clear_content(self):
         while self.content_layout.count():
+
             item = self.content_layout.takeAt(0)
 
             if item.widget():
@@ -282,11 +334,9 @@ class FindMyDevicePage(QWidget):
         self.status_label = None
         self.detected_device_layout = None
 
-    def _toggle_detection(self):
-        if self.detecting:
-            self._stop_detection()
-        else:
-            self._start_detection()
+    # ------------------------------------------------------------------
+    # Configuration
+    # ------------------------------------------------------------------
 
     def _add_device(self, device, nickname):
         configured_device = ConfiguredUsbDevice(
@@ -299,4 +349,13 @@ class FindMyDevicePage(QWidget):
             configured_device
         )
 
+        self._show_all_devices()
+
+    def _edit_device(self, device):
+        self.usb_service.update_device(device)
+        self._show_all_devices()
+
+
+    def _delete_device(self, device):
+        self.usb_service.remove_device(device.id)
         self._show_all_devices()

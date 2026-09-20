@@ -36,3 +36,13 @@ class UsbService:
         ]
 
         self.repository.save_usb_devices(devices)
+
+    def update_device(self, device: ConfiguredUsbDevice) -> None:
+        devices = self.get_configured_devices()
+
+        for index, existing_device in enumerate(devices):
+            if existing_device.id == device.id:
+                devices[index] = device
+                break
+
+        self.repository.save_usb_devices(devices)
