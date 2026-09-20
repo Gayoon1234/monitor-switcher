@@ -50,9 +50,9 @@
             "nickname": "UGREEN"
         },
         {
-            "id": "45537218-acac-4f3e-ac9a-bd1d57add279",
-            "windows_device_id": "USB\\VID_1B1C&PID_0A4F&MI_00\\6&BB63C48&2&0000",
-            "nickname": "headphone"
+            "id": "d078f147-b8c7-4a54-a227-30a07d7b3ea8",
+            "windows_device_id": "USB\\VID_1B1C&PID_0A4F\\5&21296CF&0&5",
+            "nickname": "Headphones"
         }
     ]
 }

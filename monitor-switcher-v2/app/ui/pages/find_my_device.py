@@ -23,6 +23,10 @@ class FindMyDevicePage(QWidget):
 
         self.usb_service = usb_service
 
+        self.usb_service.devices_changed.connect(
+            self._refresh
+        )
+
         self.detecting = False
         self.initial_device_ids = set()
 
@@ -163,6 +167,9 @@ class FindMyDevicePage(QWidget):
         )
 
         self.content_layout.addStretch()
+
+    def _refresh(self):
+        self._show_all_devices()
 
     # ------------------------------------------------------------------
     # Detect New Device

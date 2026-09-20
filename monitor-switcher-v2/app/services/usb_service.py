@@ -1,15 +1,20 @@
 from app.hardware.usb import UsbDeviceMonitor
 from app.models.usb_device import UsbDevice, ConfiguredUsbDevice
 from app.services.config_repository import ConfigRepository
+from PySide6.QtCore import QObject, Signal
 
 
-class UsbService:
+class UsbService(QObject):
+
+    devices_changed = Signal()
 
     def __init__(
         self,
         device_monitor: UsbDeviceMonitor,
         repository: ConfigRepository,
     ):
+        super().__init__()
+
         self.device_monitor = device_monitor
         self.repository = repository
 
@@ -25,6 +30,7 @@ class UsbService:
         devices.append(device)
 
         self.repository.save_usb_devices(devices)
+        self.devices_changed.emit()
 
     def remove_device(self, device_id: str) -> None:
         devices = self.get_configured_devices()
@@ -36,6 +42,7 @@ class UsbService:
         ]
 
         self.repository.save_usb_devices(devices)
+        self.devices_changed.emit()
 
     def update_device(self, device: ConfiguredUsbDevice) -> None:
         devices = self.get_configured_devices()
@@ -46,3 +53,4 @@ class UsbService:
                 break
 
         self.repository.save_usb_devices(devices)
+        self.devices_changed.emit()

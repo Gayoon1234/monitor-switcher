@@ -16,6 +16,10 @@ class MyDevicesPage(QWidget):
         self.display_service = display_service
         self.usb_service = usb_service
 
+        self.usb_service.devices_changed.connect(
+            self._refresh
+        )
+
         self._setup_ui()
 
     def _setup_ui(self, layout=None):
