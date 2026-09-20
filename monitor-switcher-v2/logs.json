@@ -1,0 +1,340 @@
+{
+    "events": [
+        {
+            "timestamp": "2026-09-15T21:35:03.132582",
+            "event_type": "device_event",
+            "message": "Device disconnected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:35:03.133361",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to Mac",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:35:03.199010",
+            "event_type": "action",
+            "message": "display-001 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:35:03.262715",
+            "event_type": "action",
+            "message": "display-002 \u2192 DVI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:37:52.566958",
+            "event_type": "device_event",
+            "message": "Device connected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:37:52.573181",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to PC",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:37:52.641004",
+            "event_type": "action",
+            "message": "display-001 \u2192 HDMI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-15T21:37:52.703783",
+            "event_type": "action",
+            "message": "display-002 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T09:02:11.784055",
+            "event_type": "device_event",
+            "message": "Device disconnected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T09:02:11.785464",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to Mac",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T09:02:11.847776",
+            "event_type": "action",
+            "message": "display-001 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T09:02:11.911003",
+            "event_type": "action",
+            "message": "display-002 \u2192 DVI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T12:24:36.144226",
+            "event_type": "device_event",
+            "message": "Device connected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T12:24:36.149974",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to PC",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T12:24:36.218767",
+            "event_type": "action",
+            "message": "display-001 \u2192 HDMI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T12:24:36.297332",
+            "event_type": "action",
+            "message": "display-002 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T13:03:17.495748",
+            "event_type": "device_event",
+            "message": "Device disconnected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T13:03:17.502239",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to Mac",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T13:03:17.565439",
+            "event_type": "action",
+            "message": "display-001 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T13:03:17.629151",
+            "event_type": "action",
+            "message": "display-002 \u2192 DVI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T17:45:44.859108",
+            "event_type": "device_event",
+            "message": "Device connected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T17:45:44.871766",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to PC",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T17:45:44.937762",
+            "event_type": "action",
+            "message": "display-001 \u2192 HDMI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-16T17:45:44.998925",
+            "event_type": "action",
+            "message": "display-002 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T09:04:06.265200",
+            "event_type": "device_event",
+            "message": "Device disconnected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T09:04:06.266826",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to Mac",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T09:04:06.333855",
+            "event_type": "action",
+            "message": "display-001 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T09:04:06.412903",
+            "event_type": "action",
+            "message": "display-002 \u2192 DVI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:12:14.475463",
+            "event_type": "device_event",
+            "message": "Device connected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:12:14.481974",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to PC",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:12:14.545669",
+            "event_type": "action",
+            "message": "display-001 \u2192 HDMI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:12:14.609067",
+            "event_type": "action",
+            "message": "display-002 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:14:35.321015",
+            "event_type": "device_event",
+            "message": "Device disconnected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:14:35.328186",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to Mac",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:14:35.401751",
+            "event_type": "action",
+            "message": "display-001 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:14:35.464092",
+            "event_type": "action",
+            "message": "display-002 \u2192 DVI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:16:06.495796",
+            "event_type": "device_event",
+            "message": "Device connected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:16:06.502973",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to PC",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:16:06.566981",
+            "event_type": "action",
+            "message": "display-001 \u2192 HDMI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:16:06.629934",
+            "event_type": "action",
+            "message": "display-002 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:16:49.643507",
+            "event_type": "device_event",
+            "message": "Device disconnected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:16:49.649888",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to Mac",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:16:49.712656",
+            "event_type": "action",
+            "message": "display-001 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:16:49.783576",
+            "event_type": "action",
+            "message": "display-002 \u2192 DVI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:33:15.474885",
+            "event_type": "device_event",
+            "message": "Device connected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:33:15.483388",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to PC",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:33:15.554646",
+            "event_type": "action",
+            "message": "display-001 \u2192 HDMI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-18T17:33:15.633846",
+            "event_type": "action",
+            "message": "display-002 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-19T18:47:10.790941",
+            "event_type": "device_event",
+            "message": "Device disconnected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-19T18:47:10.792290",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to Mac",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-19T18:47:10.865026",
+            "event_type": "action",
+            "message": "display-001 \u2192 ANALOG1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-19T18:47:10.928518",
+            "event_type": "action",
+            "message": "display-002 \u2192 DVI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-19T18:47:15.846026",
+            "event_type": "device_event",
+            "message": "Device connected",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-19T18:47:15.853288",
+            "event_type": "automation_triggered",
+            "message": "Automation triggered: Switch to PC",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-19T18:47:15.916555",
+            "event_type": "action",
+            "message": "display-001 \u2192 HDMI1",
+            "success": true
+        },
+        {
+            "timestamp": "2026-09-19T18:47:15.980854",
+            "event_type": "action",
+            "message": "display-002 \u2192 ANALOG1",
+            "success": true
+        }
+    ]
+}
