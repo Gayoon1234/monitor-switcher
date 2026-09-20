@@ -47,12 +47,22 @@
         {
             "id": "9b578e46-e0f6-4998-98a3-e9e5ae4c6e27",
             "windows_device_id": "USB\\VID_05E3&PID_0626\\5&21296CF&0&17",
-            "nickname": "UGREEN"
+            "nickname": "USB Hub"
         },
         {
             "id": "d078f147-b8c7-4a54-a227-30a07d7b3ea8",
             "windows_device_id": "USB\\VID_1B1C&PID_0A4F\\5&21296CF&0&5",
             "nickname": "Headphones"
+        },
+        {
+            "id": "a609f5cb-fadd-48bf-ae49-e0ef54b45a33",
+            "windows_device_id": "USB\\VID_046D&PID_C542\\6&80C5850&0&4",
+            "nickname": "Logitech Wireless Mouse"
+        },
+        {
+            "id": "4517ff50-5200-4086-ab51-b84e9237be17",
+            "windows_device_id": "USB\\VID_05AC&PID_110B&MI_04\\8&6E0B2F9&0&0004",
+            "nickname": "Earpods"
         }
     ]
 }
