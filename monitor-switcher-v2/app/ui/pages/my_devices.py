@@ -1,5 +1,8 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QHBoxLayout,
     QLabel,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -56,6 +59,12 @@ class MyDevicesPage(QWidget):
             for device in connected_devices
         }
 
+        device_container = QWidget()
+
+        device_layout = QHBoxLayout(
+            device_container
+        )
+
         for configured_device in configured_devices:
             connected_device = (
                 connected_devices_by_id.get(
@@ -77,6 +86,8 @@ class MyDevicesPage(QWidget):
                 connected=connected,
             )
 
+            card.setFixedWidth(250)
+
             card.edit_device_requested.connect(
                 self._edit_device
             )
@@ -85,7 +96,26 @@ class MyDevicesPage(QWidget):
                 self._delete_device
             )
 
-            layout.addWidget(card)
+            device_layout.addWidget(card)
+
+        device_layout.addStretch()
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+
+        scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarAsNeeded
+        )
+
+        scroll_area.setVerticalScrollBarPolicy(
+            Qt.ScrollBarAlwaysOff
+        )
+
+        scroll_area.setWidget(
+            device_container
+        )
+
+        layout.addWidget(scroll_area)
 
     def _edit_device(self, device):
         self.usb_service.update_device(device)
