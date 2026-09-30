@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import (
+    QDialog,
     QLabel,
     QVBoxLayout,
     QWidget,
@@ -6,6 +7,7 @@ from PySide6.QtWidgets import (
 
 from app.ui.widgets.automations_card import AutomationCard
 from app.ui.widgets.automation_editor import AutomationEditor
+
 
 class AutomationsPage(QWidget):
 
@@ -24,19 +26,34 @@ class AutomationsPage(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        layout = QVBoxLayout(self)
+        self.layout = QVBoxLayout(self)
 
         title = QLabel("Automations")
         title.setStyleSheet(
             "font-size: 24px; font-weight: bold;"
         )
 
-        layout.addWidget(title)
+        self.layout.addWidget(title)
+
+        self.automations_layout = QVBoxLayout()
+        self.layout.addLayout(self.automations_layout)
+
+        self._refresh_automations()
+
+        self.layout.addStretch()
+
+    def _refresh_automations(self):
+        while self.automations_layout.count():
+            item = self.automations_layout.takeAt(0)
+            widget = item.widget()
+
+            if widget is not None:
+                widget.deleteLater()
 
         automations = self.repository.load_automations()
 
         if not automations:
-            layout.addWidget(
+            self.automations_layout.addWidget(
                 QLabel("No automations configured.")
             )
             return
@@ -56,9 +73,7 @@ class AutomationsPage(QWidget):
                 self._delete_automation
             )
 
-            layout.addWidget(card)
-
-        layout.addStretch()
+            self.automations_layout.addWidget(card)
 
     def _edit_automation(self, automation):
         editor = AutomationEditor(
@@ -68,8 +83,20 @@ class AutomationsPage(QWidget):
             self,
         )
 
-        editor.exec()
+        if editor.exec() != QDialog.DialogCode.Accepted:
+            return
 
+        updated_automation = editor.get_automation()
+
+        automations = self.repository.load_automations()
+
+        for index, existing_automation in enumerate(automations):
+            if existing_automation.id == updated_automation.id:
+                automations[index] = updated_automation
+                break
+
+        self.repository.save_automations(automations)
+        self._refresh_automations()
 
     def _delete_automation(self, automation):
         print("Delete:", automation.id)

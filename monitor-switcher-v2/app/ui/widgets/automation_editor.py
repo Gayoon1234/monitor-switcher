@@ -10,8 +10,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from PySide6.QtCore import Signal
 from app.models.automation import (
+    Action,
     ActionType,
+    Automation,
+    Trigger,
     TriggerType,
 )
 
@@ -29,6 +33,7 @@ class AutomationEditor(QDialog):
         self.display_service = display_service
         self.usb_service = usb_service
         self.automation = automation
+        self.action_widgets = []
 
         self.displays = self.display_service.get_displays()
 
@@ -186,12 +191,39 @@ class AutomationEditor(QDialog):
             self,
         )
 
-        self.actions_layout.addWidget(
-            action_widget
+        action_widget.remove_requested.connect(
+            self._remove_action
         )
 
+        self.action_widgets.append(action_widget)
+        self.actions_layout.addWidget(action_widget)
+
+    def _remove_action(self, action_widget):
+        if action_widget in self.action_widgets:
+            self.action_widgets.remove(action_widget)
+
+        action_widget.deleteLater()
+
+    def get_automation(self) -> Automation:
+        actions = [
+            action_widget.get_action()
+            for action_widget in self.action_widgets
+        ]
+
+        return Automation(
+            id=self.automation.id if self.automation else "",
+            name=self.name_edit.text().strip(),
+            enabled=self.enabled_combo.currentData(),
+            trigger=Trigger(
+                type=self.trigger_type_combo.currentData(),
+                device_id=self.trigger_device_combo.currentData(),
+            ),
+            actions=actions,
+        )
 
 class ActionWidget(QWidget):
+
+    remove_requested = Signal(object)
 
     def __init__(
         self,
@@ -225,7 +257,7 @@ class ActionWidget(QWidget):
 
         remove_button = QPushButton("Remove")
         remove_button.clicked.connect(
-            self.deleteLater
+            lambda: self.remove_requested.emit(self)
         )
 
         layout.addWidget(self.type_combo)
@@ -302,3 +334,10 @@ class ActionWidget(QWidget):
                 self.input_combo.setCurrentIndex(
                     input_index
                 )
+                
+    def get_action(self) -> Action:
+        return Action(
+            type=self.type_combo.currentData(),
+            display_id=self.display_combo.currentData(),
+            input_id=self.input_combo.currentData(),
+        )
