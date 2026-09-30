@@ -64,5 +64,37 @@
             "windows_device_id": "USB\\VID_05AC&PID_110B&MI_04\\8&6E0B2F9&0&0004",
             "nickname": "Earpods"
         }
+    ],
+    "displays": [
+        {
+            "id": "display-001",
+            "name": "Generic Monitor (PHL 271V8)",
+            "windows_device_id": "DISPLAY\\PHLC213\\5&1869B8E5&0&UID4352",
+            "inputs": [
+                {
+                    "input_id": "ANALOG1",
+                    "input_type": "ANALOG"
+                },
+                {
+                    "input_id": "HDMI1",
+                    "input_type": "HDMI"
+                }
+            ]
+        },
+        {
+            "id": "display-002",
+            "name": "HP w1907 Wide LCD Monitor",
+            "windows_device_id": "DISPLAY\\HWP26A2\\5&1869B8E5&0&UID4353",
+            "inputs": [
+                {
+                    "input_id": "ANALOG1",
+                    "input_type": "ANALOG"
+                },
+                {
+                    "input_id": "DVI1",
+                    "input_type": "DVI"
+                }
+            ]
+        }
     ]
 }

@@ -11,6 +11,11 @@ from app.models.automation import (
 )
 from app.models.usb_device import ConfiguredUsbDevice
 
+from app.models.display import (
+    Display,
+    DisplayInput,
+    InputType,
+)
 
 class ConfigRepository:
 
@@ -113,3 +118,52 @@ class ConfigRepository:
     def _save(self, data: dict) -> None:
         with self.path.open("w", encoding="utf-8") as file:
             json.dump(data, file, indent=4)
+
+    def load_displays(self) -> list[Display]:
+        data = self._load()
+
+        displays = []
+
+        for display in data.get("displays", []):
+            inputs = [
+                DisplayInput(
+                    input_id=input_["input_id"],
+                    input_type=InputType(input_["input_type"]),
+                )
+                for input_ in display.get("inputs", [])
+            ]
+
+            displays.append(
+                Display(
+                    id=display["id"],
+                    name=display["name"],
+                    windows_device_id=display["windows_device_id"],
+                    inputs=inputs,
+                )
+            )
+
+        return displays
+
+    def save_displays(
+        self,
+        displays: list[Display],
+    ) -> None:
+        data = self._load()
+
+        data["displays"] = [
+            {
+                "id": display.id,
+                "name": display.name,
+                "windows_device_id": display.windows_device_id,
+                "inputs": [
+                    {
+                        "input_id": input_.input_id,
+                        "input_type": input_.input_type.value,
+                    }
+                    for input_ in display.inputs
+                ],
+            }
+            for display in displays
+        ]
+
+        self._save(data)

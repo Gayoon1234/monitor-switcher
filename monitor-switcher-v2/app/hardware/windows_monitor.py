@@ -7,9 +7,14 @@ from app.models.display import Display, DisplayInput, InputType
 
 
 class WindowsMonitorController(MonitorController, DisplayDiscovery):
+
     def __init__(self):
         self.monitors = get_monitors()
-        self.displays = self.get_displays()
+        self.displays = []
+        self._monitor_map = {}
+
+    def set_displays(self, displays: list[Display]) -> None:
+        self.displays = displays
         self._monitor_map = {
             display.id: monitor
             for display, monitor in zip(self.displays, self.monitors)
@@ -26,6 +31,7 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
             for display in self.displays
             if display.id == display_id
         )
+
         display.current_input = input_id
 
     def get_displays(self) -> list[Display]:

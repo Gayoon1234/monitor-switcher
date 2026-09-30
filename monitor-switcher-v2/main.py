@@ -26,12 +26,14 @@ usb_monitor = WindowsUsbDeviceMonitor()
 # Services
 # -------------------------
 
+repository = ConfigRepository()
+
 display_service = DisplayService(
     monitor_controller=monitor_controller,
     display_discovery=monitor_controller,
+    repository=repository,
 )
 
-repository = ConfigRepository()
 activity_repository = ActivityRepository()
 
 usb_service = UsbService(
