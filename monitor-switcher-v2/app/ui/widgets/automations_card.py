@@ -1,6 +1,9 @@
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QFrame,
+    QHBoxLayout,
     QLabel,
+    QPushButton,
     QVBoxLayout,
 )
 
@@ -8,9 +11,10 @@ from app.models.automation import (
     ActionType,
     TriggerType,
 )
-
-
 class AutomationCard(QFrame):
+
+    edit_requested = Signal(object)
+    delete_requested = Signal(object)
 
     def __init__(
         self,
@@ -75,3 +79,22 @@ class AutomationCard(QFrame):
             layout.addWidget(
                 QLabel(f"      {action_text}")
             )
+
+        # Buttons
+        buttons_layout = QHBoxLayout()
+
+        edit_button = QPushButton("Edit")
+        edit_button.clicked.connect(
+            lambda: self.edit_requested.emit(self.automation)
+        )
+
+        delete_button = QPushButton("Delete")
+        delete_button.clicked.connect(
+            lambda: self.delete_requested.emit(self.automation)
+        )
+
+        buttons_layout.addWidget(edit_button)
+        buttons_layout.addWidget(delete_button)
+        buttons_layout.addStretch()
+
+        layout.addLayout(buttons_layout)

@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.widgets.automations_card import AutomationCard
+from app.ui.widgets.automation_editor import AutomationEditor
 
 class AutomationsPage(QWidget):
 
@@ -41,12 +42,34 @@ class AutomationsPage(QWidget):
             return
 
         for automation in automations:
-            layout.addWidget(
-                AutomationCard(
-                    automation,
-                    self.display_service,
-                    self.usb_service
-                )
+            card = AutomationCard(
+                automation,
+                self.display_service,
+                self.usb_service,
             )
 
+            card.edit_requested.connect(
+                self._edit_automation
+            )
+
+            card.delete_requested.connect(
+                self._delete_automation
+            )
+
+            layout.addWidget(card)
+
         layout.addStretch()
+
+    def _edit_automation(self, automation):
+        editor = AutomationEditor(
+            self.display_service,
+            self.usb_service,
+            automation,
+            self,
+        )
+
+        editor.exec()
+
+
+    def _delete_automation(self, automation):
+        print("Delete:", automation.id)
