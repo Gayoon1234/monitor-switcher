@@ -111,10 +111,7 @@ class AutomationService(QObject):
                     )
 
     def _emit_activity(self, event: ActivityEvent) -> None:
-        events = self.activity_repository.load()
-        events.append(event)
-        self.activity_repository.save(events)
-
+        self.activity_repository.append(event)
         self.activity_event.emit(event)
         
     def get_activity_history(self) -> list[ActivityEvent]:
