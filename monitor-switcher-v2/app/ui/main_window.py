@@ -55,7 +55,11 @@ class MainWindow(QMainWindow):
         )
         
         self.pages.addWidget(
-            AutomationsPage(self.repository)
+            AutomationsPage(
+                self.repository,
+                self.display_service,
+                self.usb_service
+            )
         )
         
         self.activity_page = ActivityPage(

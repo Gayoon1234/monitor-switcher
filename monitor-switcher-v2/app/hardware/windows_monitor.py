@@ -1,5 +1,6 @@
 import win32com.client
-from monitorcontrol import get_monitors
+
+from monitorcontrol import InputSource, get_monitors
 
 from app.hardware.monitor import DisplayDiscovery, MonitorController
 from app.models.display import Display, DisplayInput, InputType
@@ -9,8 +10,11 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
 
     def __init__(self):
         self.monitors = get_monitors()
-        self.displays = self.get_displays()
+        self.displays = []
+        self._monitor_map = {}
 
+    def set_displays(self, displays: list[Display]) -> None:
+        self.displays = displays
         self._monitor_map = {
             display.id: monitor
             for display, monitor in zip(self.displays, self.monitors)
@@ -32,41 +36,28 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
 
     def get_displays(self) -> list[Display]:
         wmi = win32com.client.GetObject("winmgmts:")
-        
         # Win32_DesktopMonitor does not detect my beloved hp w1907, so PnPEntity it is.
         devices = wmi.InstancesOf("Win32_PnPEntity")
 
+        display_devices = [
+            device
+            for device in devices
+            if (device.DeviceID or "").startswith("DISPLAY\\")
+        ]
+
         result = []
 
-        for device in devices:
-            device_id = device.DeviceID or ""
+        for index, device in enumerate(display_devices):
+            monitor = self.monitors[index] if index < len(self.monitors) else None
 
-            if not device_id.startswith("DISPLAY\\"):
-                continue
-
-            display_id = f"display-{len(result) + 1:03d}"
-
-            if "PHLC213" in device_id:
-                inputs = [
-                    DisplayInput("HDMI1", InputType.HDMI),
-                    DisplayInput("ANALOG1", InputType.ANALOG),
-                ]
-            elif "HWP26A2" in device_id:
-                inputs = [
-                    DisplayInput("ANALOG1", InputType.ANALOG),
-                    DisplayInput("DVI1", InputType.DVI),
-                ]
-            else:
-                inputs = []
-
-            monitor = self.monitors[len(result)]
+            inputs = self._get_inputs(monitor)
             current_input = self._get_current_input(monitor, inputs)
 
             result.append(
                 Display(
-                    id=display_id,
-                    name=device.Name or device_id,
-                    windows_device_id=device_id,
+                    id=f"display-{index + 1:03d}",
+                    name=device.Name or device.DeviceID,
+                    windows_device_id=device.DeviceID,
                     inputs=inputs,
                     current_input=current_input,
                 )
@@ -74,24 +65,74 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
 
         return result
 
+
+    def _get_inputs(self, monitor) -> list[DisplayInput]:
+        if monitor is None:
+            return []
+
+        try:
+            with monitor:
+                capabilities = monitor.get_vcp_capabilities()
+        except Exception:
+            # get_vcp_capabilities does not work on the HP w1907...don't know why...
+            if monitor.vcp.description == "HP w1907 Wide LCD Monitor":
+                return [
+                    DisplayInput("ANALOG1", InputType.ANALOG),
+                    DisplayInput("DVI1", InputType.DVI),
+                ]
+
+            return []
+
+        return [
+            display_input
+            for input_source in capabilities.get("inputs", [])
+            if (display_input := self._to_display_input(input_source)) is not None
+        ]  
+
+    def _to_display_input(self, input_source) -> DisplayInput | None:
+        input_name = getattr(input_source, "name", None)
+
+        if input_name is None:
+            return None
+
+        input_type = self._get_input_type(input_name)
+
+        if input_type is None:
+            return None
+
+        return DisplayInput(
+            input_id=input_name,
+            input_type=input_type,
+        )
+
+    def _get_input_type(self, input_name: str) -> InputType | None:
+        if input_name.startswith("HDMI"):
+            return InputType.HDMI
+
+        if input_name.startswith("DVI"):
+            return InputType.DVI
+
+        if input_name.startswith("ANALOG"):
+            return InputType.ANALOG
+
+        return None
+
     def _get_current_input(
         self,
         monitor,
         inputs: list[DisplayInput],
     ) -> str | None:
+        if monitor is None:
+            return None
 
         try:
             with monitor:
                 value = monitor.get_input_source()
-
         except Exception:
             return None
 
-        input_map = {
-            1: "DVI1",
-            2: "ANALOG1",
-            15: "ANALOG1",
-            17: "HDMI1",
-        }
+        for input_source in InputSource:
+            if input_source.value == value:
+                return input_source.name
 
-        return input_map.get(value)
+        return None
