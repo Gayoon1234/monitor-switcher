@@ -1,4 +1,0 @@
-monitorcontrol
-pywin32
-pystray
-Pillow
