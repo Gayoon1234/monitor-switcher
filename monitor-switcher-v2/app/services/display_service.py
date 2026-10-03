@@ -15,24 +15,28 @@ class DisplayService:
         self.display_discovery = display_discovery
         self.repository = repository
 
-        displays = self.repository.load_displays()
+        self.displays = self.repository.load_displays()
 
-        if not displays:
-            displays = self.display_discovery.get_displays()
-            self.repository.save_displays(displays)
+        if not self.displays:
+            self.displays = self.display_discovery.get_displays()
+            self.repository.save_displays(self.displays)
+        else:
+            self._refresh_current_inputs()
 
-        self.monitor_controller.set_displays(displays)
+        self.monitor_controller.set_displays(self.displays)
 
     def get_displays(self) -> list[Display]:
-        return self.repository.load_displays()
+        return self.displays
 
     def refresh_displays(self) -> list[Display]:
         displays = self.display_discovery.get_displays()
 
         self.repository.save_displays(displays)
-        self.monitor_controller.set_displays(displays)
 
-        return displays
+        self.displays = displays
+        self.monitor_controller.set_displays(self.displays)
+
+        return self.displays
 
     def switch_input(
         self,
@@ -43,3 +47,22 @@ class DisplayService:
             display_id,
             input_id,
         )
+
+        for display in self.displays:
+            if display.id == display_id:
+                display.current_input = input_id
+                break
+
+    def _refresh_current_inputs(self) -> None:
+        live_displays = self.display_discovery.get_displays()
+
+        current_inputs = {
+            display.windows_device_id: display.current_input
+            for display in live_displays
+        }
+
+        for display in self.displays:
+            if display.windows_device_id in current_inputs:
+                display.current_input = current_inputs[
+                    display.windows_device_id
+                ]
