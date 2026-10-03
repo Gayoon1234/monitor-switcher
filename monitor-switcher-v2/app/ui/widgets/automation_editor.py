@@ -106,7 +106,7 @@ class AutomationEditor(QDialog):
             "Add Action"
         )
         add_action_button.clicked.connect(
-            self._add_action
+            lambda: self._add_action()
         )
 
         layout.addWidget(add_action_button)
