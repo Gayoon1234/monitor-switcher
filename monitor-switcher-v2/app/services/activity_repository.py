@@ -41,7 +41,7 @@ class ActivityRepository:
                 event.timestamp.isoformat(),
                 event.event_type,
                 event.message,
-                event.success,
+                int(event.success),
             ),
         )
         self._connection.commit()
@@ -64,3 +64,6 @@ class ActivityRepository:
             )
             for timestamp, event_type, message, success in cursor.fetchall()
         ]
+
+    def close(self) -> None:
+        self._connection.close()
