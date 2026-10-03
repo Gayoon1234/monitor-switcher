@@ -3,7 +3,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QVBoxLayout,
     QWidget,
-    QMessageBox
+    QMessageBox,
+    QPushButton,
 )
 
 from app.ui.widgets.automations_card import AutomationCard
@@ -35,6 +36,10 @@ class AutomationsPage(QWidget):
         )
 
         self.layout.addWidget(title)
+
+        add_button = QPushButton("Add Automation")
+        add_button.clicked.connect(self._add_automation)
+        self.layout.addWidget(add_button)
 
         self.automations_layout = QVBoxLayout()
         self.layout.addLayout(self.automations_layout)
@@ -122,3 +127,39 @@ class AutomationsPage(QWidget):
 
         self.repository.save_automations(automations)
         self._refresh_automations()
+
+    def _add_automation(self):
+        editor = AutomationEditor(
+            self.display_service,
+            self.usb_service,
+            parent=self,
+        )
+
+        if editor.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        automation = editor.get_automation()
+
+        automations = self.repository.load_automations()
+
+        automation.id = self._get_next_automation_id(
+            automations
+        )
+
+        automations.append(automation)
+
+        self.repository.save_automations(automations)
+        self._refresh_automations()
+
+    def _get_next_automation_id(self, automations):
+        existing_ids = {
+            automation.id
+            for automation in automations
+        }
+
+        index = 1
+
+        while f"automation-{index:03d}" in existing_ids:
+            index += 1
+
+        return f"automation-{index:03d}"
