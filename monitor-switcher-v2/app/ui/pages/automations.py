@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QVBoxLayout,
     QWidget,
+    QMessageBox
 )
 
 from app.ui.widgets.automations_card import AutomationCard
@@ -99,4 +100,25 @@ class AutomationsPage(QWidget):
         self._refresh_automations()
 
     def _delete_automation(self, automation):
-        print("Delete:", automation.id)
+        result = QMessageBox.question(
+            self,
+            "Delete Automation",
+            f"Are you sure you want to delete '{automation.name}'?",
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+
+        if result != QMessageBox.StandardButton.Yes:
+            return
+
+        automations = self.repository.load_automations()
+
+        automations = [
+            existing_automation
+            for existing_automation in automations
+            if existing_automation.id != automation.id
+        ]
+
+        self.repository.save_automations(automations)
+        self._refresh_automations()
