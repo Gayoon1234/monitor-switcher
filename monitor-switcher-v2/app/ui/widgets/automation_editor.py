@@ -181,7 +181,7 @@ class AutomationEditor(QDialog):
         for device in devices:
             self.trigger_device_combo.addItem(
                 device.nickname,
-                device.id,
+                device.windows_device_id,
             )
 
     def _add_action(self, action=None):
