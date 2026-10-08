@@ -1,10 +1,12 @@
+import logging
+
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from app.hardware.usb import UsbDeviceMonitor
-from app.models.device_event import (
-    DeviceEvent,
-    DeviceEventType,
-)
+from app.models.device_event import DeviceEvent, DeviceEventType
+
+
+logger = logging.getLogger(__name__)
 
 
 class UsbMonitorService(QObject):
@@ -34,7 +36,14 @@ class UsbMonitorService(QObject):
         self.timer.stop()
 
     def _check_device(self) -> None:
-        connected = self._is_connected()
+        try:
+            connected = self._is_connected()
+        except Exception:
+            logger.exception(
+                "Failed to check USB device state for %s",
+                self.device_id,
+            )
+            return
 
         if connected == self.previous_connected:
             return
