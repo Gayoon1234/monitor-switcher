@@ -43,15 +43,21 @@ class DisplayService:
         display_id: str,
         input_id: str,
     ) -> None:
+        display = self._find_display(display_id)
+
         self.monitor_controller.switch_input(
             display_id,
             input_id,
         )
 
+        display.current_input = input_id
+
+    def _find_display(self, display_id: str) -> Display:
         for display in self.displays:
             if display.id == display_id:
-                display.current_input = input_id
-                break
+                return display
+
+        raise ValueError(f"Display not found: {display_id}")
 
     def _refresh_current_inputs(self) -> None:
         live_displays = self.display_discovery.get_displays()
