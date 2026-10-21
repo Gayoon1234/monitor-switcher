@@ -74,7 +74,6 @@ automation_service = AutomationService(
 # -------------------------
 usb_monitor_service = UsbMonitorService(
     device_monitor=usb_monitor,
-    device_id="USB\\VID_05E3&PID_0626\\5&21296CF&0&17",
 )
 
 usb_monitor_service.device_event.connect(

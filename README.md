@@ -176,7 +176,7 @@ A simplified example of the persisted config looks like this:
 ## Important implementation notes
 
 - This project is tightly targeted at Windows. It depends on `pywin32` and the Windows WMI APIs.
-- The application currently watches a single hard-coded USB device ID in `main.py` for the event monitor loop. If you want to monitor a different device, update that value in the `UsbMonitorService` setup.
+- By default, the app watches all connected USB devices and emits a device event for each one that connects or disconnects.
 - The current automation model is intentionally simple: it can trigger on USB connect/disconnect and execute a switch-input action.
 - The app is best suited to local desktop usage on a single Windows machine with direct access to the display hardware.
 

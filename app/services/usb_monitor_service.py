@@ -16,20 +16,25 @@ class UsbMonitorService(QObject):
     def __init__(
         self,
         device_monitor: UsbDeviceMonitor,
-        device_id: str,
+        device_id: str | None = None,
     ):
         super().__init__()
 
         self.device_monitor = device_monitor
         self.device_id = device_id
 
-        self.previous_connected = False
+        self.previous_connected: bool | set[str] = (
+            set() if device_id is None else False
+        )
 
         self.timer = QTimer()
         self.timer.timeout.connect(self._check_device)
 
     def start(self, interval_ms: int = 500) -> None:
-        self.previous_connected = self._is_connected()
+        if self.device_id is None:
+            self.previous_connected = self._current_device_ids()
+        else:
+            self.previous_connected = self._is_connected()
         self.timer.start(interval_ms)
 
     def stop(self) -> None:
@@ -37,6 +42,10 @@ class UsbMonitorService(QObject):
 
     def _check_device(self) -> None:
         try:
+            if self.device_id is None:
+                self._check_all_devices()
+                return
+
             connected = self._is_connected()
         except Exception:
             logger.exception(
@@ -62,6 +71,35 @@ class UsbMonitorService(QObject):
                 event_type=event_type,
             )
         )
+
+    def _check_all_devices(self) -> None:
+        current_ids = self._current_device_ids()
+        previous_ids = set(self.previous_connected)
+
+        for device_id in sorted(current_ids - previous_ids):
+            self.device_event.emit(
+                DeviceEvent(
+                    device_id=device_id,
+                    event_type=DeviceEventType.CONNECTED,
+                )
+            )
+
+        for device_id in sorted(previous_ids - current_ids):
+            self.device_event.emit(
+                DeviceEvent(
+                    device_id=device_id,
+                    event_type=DeviceEventType.DISCONNECTED,
+                )
+            )
+
+        self.previous_connected = current_ids
+
+    def _current_device_ids(self) -> set[str]:
+        devices = self.device_monitor.get_devices()
+        return {
+            device.windows_device_id
+            for device in devices
+        }
 
     def _is_connected(self) -> bool:
         devices = self.device_monitor.get_devices()

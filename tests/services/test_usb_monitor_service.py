@@ -109,6 +109,33 @@ def test_disconnected_to_disconnected_emits_no_event(qapp):
     assert service.previous_connected is False
 
 
+def test_all_devices_are_monitored(qapp):
+    device_1 = UsbDevice(
+        windows_device_id="USB\\DEVICE_1",
+        name="Device 1",
+    )
+    device_2 = UsbDevice(
+        windows_device_id="USB\\DEVICE_2",
+        name="Device 2",
+    )
+
+    service = UsbMonitorService(device_monitor=FakeUsbDeviceMonitor([device_1]))
+    service.previous_connected = {device_1.windows_device_id}
+
+    monitor = service.device_monitor
+    monitor.devices = [device_1, device_2]
+
+    events = []
+    service.device_event.connect(events.append)
+
+    service._check_device()
+
+    assert len(events) == 1
+    assert events[0].device_id == "USB\\DEVICE_2"
+    assert events[0].event_type == DeviceEventType.CONNECTED
+    assert service.previous_connected == {"USB\\DEVICE_1", "USB\\DEVICE_2"}
+
+
 def test_hardware_failure_does_not_emit_event_or_change_state(qapp):
     service, monitor = create_service()
 
