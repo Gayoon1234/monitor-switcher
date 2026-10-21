@@ -155,6 +155,28 @@ class ThemeService:
                 border-radius: 10px;
                 padding: 7px 10px;
             }}
+            QLabel#automationSummary {{
+                color: {colors["muted_text"]};
+                font-size: 12px;
+            }}
+            QLabel#automationStep {{
+                background-color: {colors["surface_alt"]};
+                border-radius: 6px;
+                padding: 9px 11px;
+            }}
+            QLabel#automationStatus {{
+                background-color: {colors["configured_background"]};
+                border: 1px solid {colors["configured_border"]};
+                border-radius: 10px;
+                padding: 4px 9px;
+                font-size: 11px;
+                font-weight: 700;
+            }}
+            QLabel#automationStatus[automationState="disabled"] {{
+                background-color: {colors["surface_alt"]};
+                border-color: {colors["border"]};
+                color: {colors["muted_text"]};
+            }}
             QLabel#emptyState {{
                 color: {colors["muted_text"]};
                 background-color: {colors["surface"]};
@@ -165,10 +187,14 @@ class ThemeService:
             QMainWindow, QStackedWidget, QScrollArea {{
                 background-color: {colors["background"]};
             }}
-            QFrame#displayCard, QFrame#activityItem {{
+            QFrame#displayCard, QFrame#activityItem,
+            QFrame#automationCard, QWidget#actionEditorCard {{
                 background-color: {colors["surface"]};
                 border: 1px solid {colors["border"]};
                 border-radius: 10px;
+            }}
+            QFrame#automationCard {{
+                border-radius: 12px;
             }}
             QFrame#activityItem[eventState="success"] {{
                 border-left: 3px solid {colors["configured_border"]};
@@ -245,6 +271,14 @@ class ThemeService:
                 color: {colors["primary_text"]};
                 border-color: {colors["primary"]};
                 font-weight: 700;
+            }}
+            QPushButton#primaryButton:hover {{
+                background-color: {colors["primary"]};
+                border-color: {colors["primary"]};
+            }}
+            QPushButton#secondaryButton {{
+                background-color: {colors["surface_alt"]};
+                font-weight: 600;
             }}
             QPushButton#dangerButton:hover {{
                 border-color: {colors["unconfigured_border"]};
