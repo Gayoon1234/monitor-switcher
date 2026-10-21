@@ -1,5 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QListWidget,
     QMainWindow,
@@ -11,10 +12,18 @@ from app.ui.pages.my_devices import MyDevicesPage
 from app.ui.pages.automations import AutomationsPage
 from app.ui.pages.activity import ActivityPage
 from app.ui.pages.find_my_device import FindMyDevicePage
+from app.ui.pages.settings import SettingsPage
 
 class MainWindow(QMainWindow):
 
-    def __init__(self, display_service, usb_service, repository, automation_service):
+    def __init__(
+        self,
+        display_service,
+        usb_service,
+        repository,
+        automation_service,
+        theme_service=None,
+    ):
         super().__init__()
 
         self.setWindowTitle("Monitor Switcher")
@@ -24,6 +33,7 @@ class MainWindow(QMainWindow):
         self.usb_service = usb_service
         self.repository = repository
         self.automation_service = automation_service
+        self.theme_service = theme_service
         
         self._setup_ui()
 
@@ -76,7 +86,14 @@ class MainWindow(QMainWindow):
             self.activity_page
         )
 
-        self.pages.addWidget(QWidget())
+        if self.theme_service is not None:
+            self.settings_page = SettingsPage(self.theme_service)
+            self.settings_page.theme_changed.connect(
+                self._set_active_theme
+            )
+            self.pages.addWidget(self.settings_page)
+        else:
+            self.pages.addWidget(QWidget())
 
         self.sidebar.currentRowChanged.connect(
             self.pages.setCurrentIndex
@@ -88,3 +105,11 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.pages)
 
         self.setCentralWidget(container)
+
+    def _set_active_theme(self, theme_name):
+        self.theme_service.set_active_theme(theme_name)
+        application = QApplication.instance()
+        if application is not None:
+            application.setStyleSheet(
+                self.theme_service.get_stylesheet()
+            )

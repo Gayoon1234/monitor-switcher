@@ -92,6 +92,7 @@ window = MainWindow(
     usb_service=usb_service,
     repository=repository,
     automation_service=automation_service,
+    theme_service=theme_service,
 )
 
 automation_service.activity_event.connect(

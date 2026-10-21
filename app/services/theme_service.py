@@ -4,36 +4,102 @@ from pathlib import Path
 
 
 class ThemeService:
-    DEFAULT_COLORS = {
-        "background": "#1e1e1e",
-        "surface": "#252526",
-        "surface_alt": "#333333",
-        "text": "#f1f1f1",
-        "muted_text": "#b0b0b0",
-        "primary": "#4c8dff",
-        "border": "#3c3c3c",
-        "configured_background": "#29432f",
-        "configured_border": "#4f7d59",
-        "unconfigured_background": "#4a4328",
-        "unconfigured_border": "#8a7a3a",
+    DEFAULT_THEMES = {
+        "dark": {
+            "background": "#1e1e1e",
+            "surface": "#252526",
+            "surface_alt": "#333333",
+            "text": "#f1f1f1",
+            "muted_text": "#b0b0b0",
+            "primary": "#4c8dff",
+            "primary_text": "#ffffff",
+            "border": "#3c3c3c",
+            "configured_background": "#29432f",
+            "configured_border": "#4f7d59",
+            "unconfigured_background": "#4a4328",
+            "unconfigured_border": "#8a7a3a",
+        },
+        "light": {
+            "background": "#f4f5f7",
+            "surface": "#ffffff",
+            "surface_alt": "#f3f4f6",
+            "text": "#202124",
+            "muted_text": "#5f6368",
+            "primary": "#2563eb",
+            "primary_text": "#ffffff",
+            "border": "#d1d5db",
+            "configured_background": "#e8f5e9",
+            "configured_border": "#81c784",
+            "unconfigured_background": "#fff8e1",
+            "unconfigured_border": "#ffca28",
+        },
+        "hacker": {
+            "background": "#000000",
+            "surface": "#080d08",
+            "surface_alt": "#142014",
+            "text": "#39ff14",
+            "muted_text": "#20b510",
+            "primary": "#00ff41",
+            "primary_text": "#000000",
+            "border": "#145214",
+            "configured_background": "#08210a",
+            "configured_border": "#00cc33",
+            "unconfigured_background": "#101c08",
+            "unconfigured_border": "#67ff00",
+        },
+        "harlequin": {
+            "background": "#fff2b2",
+            "surface": "#fff2b2",
+            "surface_alt": "#ff6b6b",
+            "text": "#21152e",
+            "muted_text": "#4d3b59",
+            "primary": "#005f73",
+            "primary_text": "#ffffff",
+            "border": "#7b2cbf",
+            "configured_background": "#7ae582",
+            "configured_border": "#146b3a",
+            "unconfigured_background": "#ff8fab",
+            "unconfigured_border": "#8a1538",
+        },
     }
+    DEFAULT_COLORS = DEFAULT_THEMES["dark"]
     COLOR_PATTERN = re.compile(r"#[0-9a-fA-F]{6}")
 
     def __init__(self, path: str = "theme.json"):
         self.path = Path(path)
-        self.colors = self._load_colors()
+        self.themes = {
+            name: colors.copy()
+            for name, colors in self.DEFAULT_THEMES.items()
+        }
+        self.active_theme = "dark"
+
+        if self.path.exists():
+            self._load_theme_file()
 
     def get_color(self, name: str) -> str:
         try:
-            return self.colors[name]
+            return self.themes[self.active_theme][name]
         except KeyError as error:
             raise KeyError(f"Unknown theme color: {name}") from error
 
     def get_colors(self) -> dict[str, str]:
-        return self.colors.copy()
+        return self.themes[self.active_theme].copy()
+
+    def get_theme_names(self) -> list[str]:
+        return list(self.themes)
+
+    def get_active_theme(self) -> str:
+        return self.active_theme
+
+    def set_active_theme(self, name: str) -> None:
+        if name not in self.themes:
+            raise ValueError(f"Unknown theme: {name}")
+
+        self.active_theme = name
+        self._save_theme_file()
 
     def get_stylesheet(self) -> str:
-        colors = self.colors
+        colors = self.themes[self.active_theme]
 
         return f"""
             QWidget {{
@@ -96,7 +162,7 @@ class ThemeService:
             }}
             QListWidget::item:selected {{
                 background-color: {colors["primary"]};
-                color: {colors["surface"]};
+                color: {colors["primary_text"]};
             }}
             QPushButton, QLineEdit, QComboBox {{
                 background-color: {colors["surface"]};
@@ -125,27 +191,46 @@ class ThemeService:
             }}
         """
 
-    def _load_colors(self) -> dict[str, str]:
-        colors = self.DEFAULT_COLORS.copy()
-
-        if not self.path.exists():
-            return colors
-
+    def _load_theme_file(self) -> None:
         with self.path.open("r", encoding="utf-8") as file:
             data = json.load(file)
 
         if not isinstance(data, dict):
             raise ValueError("Theme file must contain a JSON object.")
 
-        overrides = data.get("colors", {})
-        if not isinstance(overrides, dict):
-            raise ValueError("Theme 'colors' must be a JSON object.")
+        if "themes" in data:
+            self._load_themes(data["themes"])
+            active_theme = data.get("active_theme", "dark")
+            if not isinstance(active_theme, str) or active_theme not in self.themes:
+                raise ValueError(f"Unknown active theme: {active_theme}")
+            self.active_theme = active_theme
+        else:
+            self.themes["dark"] = self._merge_colors(
+                self.themes["dark"],
+                data.get("colors", {}),
+            )
 
-        unknown_colors = overrides.keys() - colors.keys()
+    def _load_themes(self, themes: object) -> None:
+        if not isinstance(themes, dict) or not themes:
+            raise ValueError("Theme 'themes' must be a non-empty JSON object.")
+
+        for name, palette in themes.items():
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError("Theme names must be non-empty strings.")
+
+            defaults = self.themes.get(name, self.DEFAULT_COLORS)
+            self.themes[name] = self._merge_colors(defaults, palette)
+
+    def _merge_colors(self, defaults: dict[str, str], overrides: object) -> dict[str, str]:
+        if not isinstance(overrides, dict):
+            raise ValueError("Theme colors must be a JSON object.")
+
+        unknown_colors = overrides.keys() - defaults.keys()
         if unknown_colors:
             names = ", ".join(sorted(unknown_colors))
             raise ValueError(f"Unknown theme color(s): {names}")
 
+        colors = defaults.copy()
         for name, value in overrides.items():
             if (
                 not isinstance(value, str)
@@ -157,3 +242,12 @@ class ThemeService:
             colors[name] = value
 
         return colors
+
+    def _save_theme_file(self) -> None:
+        data = {
+            "active_theme": self.active_theme,
+            "themes": self.themes,
+        }
+        with self.path.open("w", encoding="utf-8") as file:
+            json.dump(data, file, indent=2)
+            file.write("\n")

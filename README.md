@@ -105,24 +105,29 @@ A simplified example:
 }
 ```
 
-The app's colors are configured separately in `theme.json` under the `colors`
-object. Color values must be six-digit hex strings. Unspecified colors use the
-built-in defaults:
+Application palettes are configured in `theme.json` under the `themes` object.
+The Settings tab lets you switch among Dark, Light, Hacker, and Harlequin while
+the app is running; the selected theme is saved for the next launch. Palette
+color values must be six-digit hex strings:
 
 ```json
 {
-  "colors": {
-    "background": "#1e1e1e",
-    "surface": "#252526",
-    "surface_alt": "#333333",
-    "text": "#f1f1f1",
-    "muted_text": "#b0b0b0",
-    "primary": "#4c8dff",
-    "border": "#3c3c3c",
-    "configured_background": "#29432f",
-    "configured_border": "#4f7d59",
-    "unconfigured_background": "#4a4328",
-    "unconfigured_border": "#8a7a3a"
+  "active_theme": "dark",
+  "themes": {
+    "dark": {
+      "background": "#1e1e1e",
+      "surface": "#252526",
+      "text": "#f1f1f1",
+      "primary": "#4c8dff",
+      "primary_text": "#ffffff"
+    },
+    "light": {
+      "background": "#f4f5f7",
+      "surface": "#ffffff",
+      "text": "#202124",
+      "primary": "#2563eb",
+      "primary_text": "#ffffff"
+    }
   }
 }
 ```
