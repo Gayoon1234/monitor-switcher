@@ -87,7 +87,7 @@ def test_rejects_unknown_theme_name(tmp_path):
 
 
 def test_harlequin_palette_has_readable_text_contrast(tmp_path):
-    service = ThemeService(str(tmp_path / "missing.json"))
+    service = ThemeService("theme.json")
     palette = service.themes["harlequin"]
 
     def contrast_ratio(first, second):
@@ -134,6 +134,9 @@ def test_harlequin_palette_has_readable_text_contrast(tmp_path):
         palette["surface"],
         palette["muted_text"],
     ) >= 4.5
+    assert palette["surface"] != palette["background"]
+    assert palette["surface_alt"] != palette["surface"]
+    assert palette["border"] != palette["primary"]
 
 
 def test_legacy_colors_theme_file_still_loads(tmp_path):
