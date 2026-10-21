@@ -14,6 +14,8 @@ class DisplayService:
         self.monitor_controller = monitor_controller
         self.display_discovery = display_discovery
         self.repository = repository
+        self.displays: list[Display] = []
+        self._display_by_id: dict[str, Display] = {}
 
         self.displays = self.repository.load_displays()
 
@@ -23,6 +25,7 @@ class DisplayService:
         else:
             self._refresh_current_inputs()
 
+        self._rebuild_display_lookup()
         self.monitor_controller.set_displays(self.displays)
 
     def get_displays(self) -> list[Display]:
@@ -31,10 +34,11 @@ class DisplayService:
     def refresh_displays(self) -> list[Display]:
         displays = self.display_discovery.get_displays()
 
-        self.repository.save_displays(displays)
-
-        self.displays = displays
-        self.monitor_controller.set_displays(self.displays)
+        if displays != self.displays:
+            self.repository.save_displays(displays)
+            self.displays = displays
+            self._rebuild_display_lookup()
+            self.monitor_controller.set_displays(self.displays)
 
         return self.displays
 
@@ -53,11 +57,16 @@ class DisplayService:
         display.current_input = input_id
 
     def _find_display(self, display_id: str) -> Display:
-        for display in self.displays:
-            if display.id == display_id:
-                return display
+        try:
+            return self._display_by_id[display_id]
+        except KeyError as error:
+            raise ValueError(f"Display not found: {display_id}") from error
 
-        raise ValueError(f"Display not found: {display_id}")
+    def _rebuild_display_lookup(self) -> None:
+        self._display_by_id = {
+            display.id: display
+            for display in self.displays
+        }
 
     def _refresh_current_inputs(self) -> None:
         live_displays = self.display_discovery.get_displays()
