@@ -10,29 +10,32 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
 
     def __init__(self):
         self.monitors = get_monitors()
-        self.displays = []
-        self._monitor_map = {}
+        self.displays: list[Display] = []
+        self._monitor_map: dict[str, object] = {}
+        self._display_lookup: dict[str, Display] = {}
 
     def set_displays(self, displays: list[Display]) -> None:
         self.displays = displays
+        self._display_lookup = {
+            display.id: display
+            for display in self.displays
+        }
         self._monitor_map = {
             display.id: monitor
             for display, monitor in zip(self.displays, self.monitors)
         }
 
     def switch_input(self, display_id: str, input_id: str) -> None:
-        monitor = self._monitor_map[display_id]
+        monitor = self._monitor_map.get(display_id)
+        if monitor is None:
+            raise KeyError(f"Display not configured for switching: {display_id}")
 
         with monitor:
             monitor.set_input_source(input_id)
 
-        display = next(
-            display
-            for display in self.displays
-            if display.id == display_id
-        )
-
-        display.current_input = input_id
+        display = self._display_lookup.get(display_id)
+        if display is not None:
+            display.current_input = input_id
 
     def get_displays(self) -> list[Display]:
         wmi = win32com.client.GetObject("winmgmts:")

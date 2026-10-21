@@ -17,18 +17,36 @@ from app.models.display import (
     InputType,
 )
 
+
 class ConfigRepository:
 
     def __init__(self, path: str = "config.json"):
         self.path = Path(path)
+        self._cache: dict = {}
+
+    def _load(self) -> dict:
+        if self._cache:
+            return self._cache
+
+        if not self.path.exists():
+            self._cache = {}
+            return self._cache
+
+        try:
+            with self.path.open("r", encoding="utf-8") as file:
+                self._cache = json.load(file)
+        except (json.JSONDecodeError, OSError):
+            self._cache = {}
+
+        return self._cache
+
+    def _save(self, data: dict) -> None:
+        self._cache = data
+        with self.path.open("w", encoding="utf-8") as file:
+            json.dump(data, file, indent=4)
 
     def load_usb_devices(self) -> list[ConfiguredUsbDevice]:
-        if not self.path.exists():
-            return []
-
-        with self.path.open("r", encoding="utf-8") as file:
-            data = json.load(file)
-
+        data = self._load()
         return [
             ConfiguredUsbDevice(**device)
             for device in data.get("usb_devices", [])
@@ -39,12 +57,10 @@ class ConfigRepository:
         devices: list[ConfiguredUsbDevice],
     ) -> None:
         data = self._load()
-
         data["usb_devices"] = [
             asdict(device)
             for device in devices
         ]
-
         self._save(data)
 
     def load_automations(self) -> list[Automation]:
@@ -84,7 +100,6 @@ class ConfigRepository:
         automations: list[Automation],
     ) -> None:
         data = self._load()
-
         data["automations"] = [
             {
                 "id": automation.id,
@@ -105,23 +120,10 @@ class ConfigRepository:
             }
             for automation in automations
         ]
-
         self._save(data)
-
-    def _load(self) -> dict:
-        if not self.path.exists():
-            return {}
-
-        with self.path.open("r", encoding="utf-8") as file:
-            return json.load(file)
-
-    def _save(self, data: dict) -> None:
-        with self.path.open("w", encoding="utf-8") as file:
-            json.dump(data, file, indent=4)
 
     def load_displays(self) -> list[Display]:
         data = self._load()
-
         displays = []
 
         for display in data.get("displays", []):
@@ -149,7 +151,6 @@ class ConfigRepository:
         displays: list[Display],
     ) -> None:
         data = self._load()
-
         data["displays"] = [
             {
                 "id": display.id,
@@ -165,5 +166,4 @@ class ConfigRepository:
             }
             for display in displays
         ]
-
         self._save(data)

@@ -2,10 +2,12 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -40,36 +42,64 @@ class AutomationEditor(QDialog):
         self.setWindowTitle(
             "Edit Automation" if automation else "New Automation"
         )
-        self.resize(500, 500)
+        self.resize(620, 620)
+        self.setMinimumSize(500, 480)
 
         self._setup_ui()
         self._load_data()
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 22, 24, 20)
+        layout.setSpacing(14)
 
-        # Name
+        title = QLabel(
+            "Edit automation" if self.automation else "New automation"
+        )
+        title.setObjectName("pageTitle")
+        description = QLabel(
+            "Choose when this automation runs and what your display should do."
+        )
+        description.setObjectName("mutedText")
+        description.setWordWrap(True)
+        layout.addWidget(title)
+        layout.addWidget(description)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        form_content = QWidget()
+        form_layout = QVBoxLayout(form_content)
+        form_layout.setContentsMargins(0, 2, 6, 2)
+        form_layout.setSpacing(14)
+
         form = QFormLayout()
-
+        form.setHorizontalSpacing(16)
+        form.setVerticalSpacing(10)
         self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("For example, Laptop dock connected")
         form.addRow("Name:", self.name_edit)
 
-        # Enabled
         self.enabled_combo = QComboBox()
         self.enabled_combo.addItem("Enabled", True)
         self.enabled_combo.addItem("Disabled", False)
         form.addRow("Status:", self.enabled_combo)
+        form_layout.addLayout(form)
 
-        layout.addLayout(form)
-
-        # Trigger
-        trigger_label = QLabel("WHEN")
-        trigger_label.setStyleSheet(
-            "font-size: 16px; font-weight: bold;"
+        trigger_label = QLabel("Trigger")
+        trigger_label.setObjectName("sectionTitle")
+        trigger_description = QLabel(
+            "Run this automation when the selected device changes state."
         )
-        layout.addWidget(trigger_label)
+        trigger_description.setObjectName("mutedText")
+        trigger_description.setWordWrap(True)
+        form_layout.addWidget(trigger_label)
+        form_layout.addWidget(trigger_description)
 
-        trigger_layout = QHBoxLayout()
+        trigger_group = QWidget()
+        trigger_layout = QVBoxLayout(trigger_group)
+        trigger_layout.setContentsMargins(0, 0, 0, 0)
+        trigger_layout.setSpacing(8)
 
         self.trigger_type_combo = QComboBox()
         self.trigger_type_combo.addItem(
@@ -82,54 +112,46 @@ class AutomationEditor(QDialog):
         )
 
         self.trigger_device_combo = QComboBox()
+        trigger_layout.addWidget(QLabel("Device event"))
+        trigger_layout.addWidget(self.trigger_type_combo)
+        trigger_layout.addWidget(QLabel("Watch device"))
+        trigger_layout.addWidget(self.trigger_device_combo)
+        form_layout.addWidget(trigger_group)
 
-        trigger_layout.addWidget(
-            self.trigger_type_combo
+        actions_label = QLabel("Actions")
+        actions_label.setObjectName("sectionTitle")
+        actions_description = QLabel(
+            "Choose the display input to switch to."
         )
-        trigger_layout.addWidget(
-            self.trigger_device_combo
-        )
-
-        layout.addLayout(trigger_layout)
-
-        # Actions
-        actions_label = QLabel("DO")
-        actions_label.setStyleSheet(
-            "font-size: 16px; font-weight: bold;"
-        )
-        layout.addWidget(actions_label)
+        actions_description.setObjectName("mutedText")
+        actions_description.setWordWrap(True)
+        form_layout.addWidget(actions_label)
+        form_layout.addWidget(actions_description)
 
         self.actions_layout = QVBoxLayout()
-        layout.addLayout(self.actions_layout)
+        self.actions_layout.setSpacing(8)
+        form_layout.addLayout(self.actions_layout)
 
-        add_action_button = QPushButton(
-            "Add Action"
-        )
-        add_action_button.clicked.connect(
-            lambda: self._add_action()
-        )
+        add_action_button = QPushButton("＋  Add action")
+        add_action_button.setObjectName("secondaryButton")
+        add_action_button.clicked.connect(self._add_action)
+        form_layout.addWidget(add_action_button)
+        form_layout.addStretch()
+        scroll_area.setWidget(form_content)
+        layout.addWidget(scroll_area, 1)
 
-        layout.addWidget(add_action_button)
-
-        layout.addStretch()
-
-        # Dialog buttons
         buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch()
 
         cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(
-            self.reject
-        )
+        cancel_button.clicked.connect(self.reject)
 
-        save_button = QPushButton("Save")
-        save_button.clicked.connect(
-            self.accept
-        )
+        save_button = QPushButton("Save automation")
+        save_button.setObjectName("primaryButton")
+        save_button.clicked.connect(self.accept)
 
-        buttons_layout.addStretch()
         buttons_layout.addWidget(cancel_button)
         buttons_layout.addWidget(save_button)
-
         layout.addLayout(buttons_layout)
 
     def _load_data(self):
@@ -240,7 +262,23 @@ class ActionWidget(QWidget):
         self._load_data()
 
     def _setup_ui(self):
-        layout = QHBoxLayout(self)
+        self.setObjectName("actionEditorCard")
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(8)
+
+        header = QHBoxLayout()
+        header.addWidget(QLabel("Action"), 1)
+        remove_button = QPushButton("Remove")
+        remove_button.setObjectName("dangerButton")
+        remove_button.clicked.connect(
+            lambda: self.remove_requested.emit(self)
+        )
+        header.addWidget(remove_button)
+        layout.addLayout(header)
+
+        controls_layout = QHBoxLayout()
+        controls_layout.setSpacing(8)
 
         self.type_combo = QComboBox()
         self.type_combo.addItem(
@@ -255,18 +293,25 @@ class ActionWidget(QWidget):
         self.display_combo = QComboBox()
         self.input_combo = QComboBox()
 
-        remove_button = QPushButton("Remove")
-        remove_button.clicked.connect(
-            lambda: self.remove_requested.emit(self)
-        )
-
-        layout.addWidget(self.type_combo)
-        layout.addWidget(self.display_combo)
-        layout.addWidget(self.input_combo)
-        layout.addWidget(remove_button)
+        for label_text, combo in (
+            ("Action type", self.type_combo),
+            ("Display", self.display_combo),
+            ("Target input", self.input_combo),
+        ):
+            control = QWidget()
+            control_layout = QVBoxLayout(control)
+            control_layout.setContentsMargins(0, 0, 0, 0)
+            control_layout.setSpacing(4)
+            control_layout.addWidget(QLabel(label_text))
+            control_layout.addWidget(combo)
+            controls_layout.addWidget(control, 1)
+        layout.addLayout(controls_layout)
 
         self.display_combo.currentIndexChanged.connect(
             self._load_inputs
+        )
+        self.type_combo.currentIndexChanged.connect(
+            self._update_controls
         )
 
     def _load_data(self):
@@ -298,6 +343,7 @@ class ActionWidget(QWidget):
                 )
 
         self._load_inputs()
+        self._update_controls()
 
     def _load_inputs(self):
         self.input_combo.clear()
@@ -305,6 +351,7 @@ class ActionWidget(QWidget):
         display_id = self.display_combo.currentData()
 
         if display_id is None:
+            self._update_controls()
             return
 
         display = next(
@@ -317,6 +364,7 @@ class ActionWidget(QWidget):
         )
 
         if display is None:
+            self._update_controls()
             return
 
         for input_ in display.inputs:
@@ -334,7 +382,20 @@ class ActionWidget(QWidget):
                 self.input_combo.setCurrentIndex(
                     input_index
                 )
-                
+
+        self._update_controls()
+
+    def _update_controls(self):
+        is_switch_action = (
+            self.type_combo.currentData() == ActionType.SWITCH_INPUT
+        )
+        self.display_combo.setEnabled(
+            is_switch_action and bool(self.displays)
+        )
+        self.input_combo.setEnabled(
+            is_switch_action and self.input_combo.count() > 0
+        )
+
     def get_action(self) -> Action:
         return Action(
             type=self.type_combo.currentData(),

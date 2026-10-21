@@ -1,5 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QLabel,
     QScrollArea,
@@ -24,98 +25,124 @@ class MyDevicesPage(QWidget):
         )
 
         self._setup_ui()
+        self._refresh()
 
-    def _setup_ui(self, layout=None):
-        if layout is None:
-            layout = QVBoxLayout(self)
+    def _setup_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.content = QWidget()
+        self.content_layout = QVBoxLayout(self.content)
+        self.content_layout.setContentsMargins(24, 20, 24, 20)
+        self.content_layout.setSpacing(12)
 
         title = QLabel("My Devices")
-        layout.addWidget(title)
+        title.setObjectName("pageTitle")
+        self.content_layout.addWidget(title)
 
-        layout.addWidget(QLabel("Displays"))
+        self.displays_title = QLabel("Displays")
+        self.displays_title.setObjectName("sectionTitle")
+        self.content_layout.addWidget(self.displays_title)
 
-        displays = self.display_service.get_displays()
+        self.display_list = QWidget()
+        self.display_layout = QVBoxLayout(self.display_list)
+        self.display_layout.setSpacing(12)
+        self.content_layout.addWidget(self.display_list)
 
-        for display in displays:
-            layout.addWidget(
-                DisplayCard(
-                    display,
-                    self.display_service,
-                )
+        self.usb_title = QLabel("USB Devices")
+        self.usb_title.setObjectName("sectionTitle")
+        self.content_layout.addWidget(self.usb_title)
+
+        self.device_scroll_area = QScrollArea()
+        self.device_scroll_area.setWidgetResizable(False)
+        self.device_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.device_scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarAsNeeded
+        )
+        self.device_scroll_area.setVerticalScrollBarPolicy(
+            Qt.ScrollBarAlwaysOff
+        )
+
+        self.device_container = QWidget()
+        self.device_layout = QHBoxLayout(self.device_container)
+        self.device_layout.setContentsMargins(0, 0, 0, 0)
+        self.device_layout.setSpacing(12)
+        self.device_scroll_area.setWidget(self.device_container)
+
+        self.content_layout.addWidget(self.device_scroll_area)
+        self.content_layout.addStretch()
+
+        page_scroll_area = QScrollArea()
+        page_scroll_area.setObjectName("myDevicesScrollArea")
+        page_scroll_area.setWidgetResizable(True)
+        page_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        page_scroll_area.setWidget(self.content)
+        layout.addWidget(page_scroll_area)
+
+    def _refresh(self):
+        self._populate_displays()
+        self._populate_devices()
+
+    def _populate_displays(self):
+        while self.display_layout.count():
+            item = self.display_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+        for display in self.display_service.get_displays():
+            self.display_layout.addWidget(
+                DisplayCard(display, self.display_service)
             )
 
-        layout.addWidget(QLabel("USB Devices"))
+    def _populate_devices(self):
+        while self.device_layout.count():
+            item = self.device_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
 
-        configured_devices = (
-            self.usb_service.get_configured_devices()
-        )
-
-        connected_devices = (
-            self.usb_service.get_devices()
-        )
-
+        configured_devices = self.usb_service.get_configured_devices()
+        connected_devices = self.usb_service.get_devices()
         connected_devices_by_id = {
             device.windows_device_id: device
             for device in connected_devices
         }
 
-        device_container = QWidget()
-
-        device_layout = QHBoxLayout(
-            device_container
-        )
-
         for configured_device in configured_devices:
-            connected_device = (
-                connected_devices_by_id.get(
-                    configured_device.windows_device_id
-                )
+            connected_device = connected_devices_by_id.get(
+                configured_device.windows_device_id
             )
-
             connected = connected_device is not None
-
-            device = (
-                connected_device
-                if connected_device is not None
-                else configured_device
-            )
+            device = connected_device or configured_device
 
             card = UsbDeviceCard(
                 device,
                 configured_device=configured_device,
                 connected=connected,
             )
-
             card.setFixedWidth(250)
+            card.edit_device_requested.connect(self._edit_device)
+            card.delete_device_requested.connect(self._delete_device)
+            self.device_layout.addWidget(card)
 
-            card.edit_device_requested.connect(
-                self._edit_device
+        if not configured_devices:
+            empty_label = QLabel(
+                "No devices saved yet. Find a connected device to add it."
             )
+            empty_label.setObjectName("emptyState")
+            self.device_layout.addWidget(empty_label)
 
-            card.delete_device_requested.connect(
-                self._delete_device
-            )
-
-            device_layout.addWidget(card)
-
-        device_layout.addStretch()
-
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-
-        scroll_area.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarAsNeeded
+        self.device_layout.addStretch()
+        self.device_container.setMinimumSize(
+            self.device_layout.sizeHint()
         )
-
-        scroll_area.setVerticalScrollBarPolicy(
-            Qt.ScrollBarAlwaysOff
+        self.device_container.adjustSize()
+        self.device_scroll_area.setMinimumHeight(
+            self.device_container.sizeHint().height()
+            + self.device_scroll_area.horizontalScrollBar().sizeHint().height()
+            + 16
         )
-
-        scroll_area.setWidget(
-            device_container
-        )
-
-        layout.addWidget(scroll_area)
 
     def _edit_device(self, device):
         self.usb_service.update_device(device)
@@ -124,14 +151,3 @@ class MyDevicesPage(QWidget):
     def _delete_device(self, device):
         self.usb_service.remove_device(device.id)
         self._refresh()
-
-    def _refresh(self):
-        layout = self.layout()
-
-        while layout.count():
-            item = layout.takeAt(0)
-
-            if item.widget():
-                item.widget().deleteLater()
-
-        self._setup_ui(layout)
