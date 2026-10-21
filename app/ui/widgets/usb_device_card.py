@@ -27,6 +27,10 @@ class UsbDeviceCard(QFrame):
 
         self.device = device
         self.configured_device = configured_device
+        self.setProperty(
+            "deviceState",
+            "configured" if configured_device is not None else "unconfigured",
+        )
 
         layout = QVBoxLayout(self)
 
@@ -99,16 +103,6 @@ class UsbDeviceCard(QFrame):
             delete_button
         )
 
-        self.setStyleSheet(
-            """
-            UsbDeviceCard {
-                background-color: #29432f;
-                border: 1px solid #4f7d59;
-                border-radius: 8px;
-            }
-            """
-        )
-
     def _setup_unconfigured_card(
         self,
         layout,
@@ -144,16 +138,6 @@ class UsbDeviceCard(QFrame):
         layout.addWidget(device_id)
         layout.addWidget(nickname_input)
         layout.addWidget(add_button)
-
-        self.setStyleSheet(
-            """
-            UsbDeviceCard {
-                background-color: #4a4328;
-                border: 1px solid #8a7a3a;
-                border-radius: 8px;
-            }
-            """
-        )
 
     def _add_device(self, nickname_input):
         nickname = nickname_input.text().strip()

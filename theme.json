@@ -1,0 +1,15 @@
+{
+  "colors": {
+    "background": "#1e1e1e",
+    "surface": "#252526",
+    "surface_alt": "#333333",
+    "text": "#f1f1f1",
+    "muted_text": "#b0b0b0",
+    "primary": "#4c8dff",
+    "border": "#3c3c3c",
+    "configured_background": "#29432f",
+    "configured_border": "#4f7d59",
+    "unconfigured_background": "#4a4328",
+    "unconfigured_border": "#8a7a3a"
+  }
+}

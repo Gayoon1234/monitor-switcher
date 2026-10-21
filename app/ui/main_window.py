@@ -1,3 +1,4 @@
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QListWidget,
@@ -31,7 +32,12 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout(container)
 
         self.sidebar = QListWidget()
-        self.sidebar.setFixedWidth(150)
+        self.sidebar.setFixedWidth(190)
+        self.sidebar.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.sidebar.setWordWrap(False)
+        self.sidebar.setSpacing(4)
 
         self.sidebar.addItems([
             "My Devices",
