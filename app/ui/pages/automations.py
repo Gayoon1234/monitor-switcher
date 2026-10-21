@@ -44,25 +44,25 @@ class AutomationsPage(QWidget):
         self.automations_layout = QVBoxLayout()
         self.layout.addLayout(self.automations_layout)
 
+        self.empty_state = QLabel("No automations configured.")
         self._refresh_automations()
-
         self.layout.addStretch()
 
     def _refresh_automations(self):
         while self.automations_layout.count():
             item = self.automations_layout.takeAt(0)
             widget = item.widget()
-
             if widget is not None:
                 widget.deleteLater()
 
         automations = self.repository.load_automations()
 
         if not automations:
-            self.automations_layout.addWidget(
-                QLabel("No automations configured.")
-            )
+            if not self.empty_state.parent():
+                self.automations_layout.addWidget(self.empty_state)
             return
+
+        self.empty_state.setParent(None)
 
         for automation in automations:
             card = AutomationCard(
