@@ -3,6 +3,7 @@ import uuid
 from PySide6.QtCore import QTimer, Qt
 
 from PySide6.QtWidgets import (
+    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -44,8 +45,11 @@ class FindMyDevicePage(QWidget):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(12)
 
         title = QLabel("Find My Device")
+        title.setObjectName("pageTitle")
         layout.addWidget(title)
 
         mode_layout = QHBoxLayout()
@@ -67,6 +71,7 @@ class FindMyDevicePage(QWidget):
         layout.addLayout(mode_layout)
 
         self.content_layout = QVBoxLayout()
+        self.content_layout.setSpacing(12)
         layout.addLayout(self.content_layout)
 
         self._show_all_devices()
@@ -79,9 +84,9 @@ class FindMyDevicePage(QWidget):
         self._stop_detection()
         self._clear_content()
 
-        self.content_layout.addWidget(
-            QLabel("All Devices")
-        )
+        section_title = QLabel("Connected devices")
+        section_title.setObjectName("sectionTitle")
+        self.content_layout.addWidget(section_title)
 
         device_container = QWidget()
 
@@ -150,6 +155,7 @@ class FindMyDevicePage(QWidget):
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         scroll_area.setWidget(device_container)
 
         self.content_layout.addWidget(
@@ -179,9 +185,9 @@ class FindMyDevicePage(QWidget):
         self._stop_detection()
         self._clear_content()
 
-        self.content_layout.addWidget(
-            QLabel("Detect New Device")
-        )
+        section_title = QLabel("Detect a device")
+        section_title.setObjectName("sectionTitle")
+        self.content_layout.addWidget(section_title)
 
         detection_container = QWidget()
 

@@ -1,5 +1,6 @@
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QLabel,
     QScrollArea,
@@ -28,23 +29,34 @@ class MyDevicesPage(QWidget):
     def _setup_ui(self, layout=None):
         if layout is None:
             layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(24, 20, 24, 20)
+        content_layout.setSpacing(12)
 
         title = QLabel("My Devices")
-        layout.addWidget(title)
+        title.setObjectName("pageTitle")
+        content_layout.addWidget(title)
 
-        layout.addWidget(QLabel("Displays"))
+        displays_title = QLabel("Displays")
+        displays_title.setObjectName("sectionTitle")
+        content_layout.addWidget(displays_title)
 
         displays = self.display_service.get_displays()
 
         for display in displays:
-            layout.addWidget(
+            content_layout.addWidget(
                 DisplayCard(
                     display,
                     self.display_service,
                 )
             )
 
-        layout.addWidget(QLabel("USB Devices"))
+        usb_title = QLabel("USB Devices")
+        usb_title.setObjectName("sectionTitle")
+        content_layout.addWidget(usb_title)
 
         configured_devices = (
             self.usb_service.get_configured_devices()
@@ -98,10 +110,18 @@ class MyDevicesPage(QWidget):
 
             device_layout.addWidget(card)
 
+        if not configured_devices:
+            empty_label = QLabel(
+                "No devices saved yet. Find a connected device to add it."
+            )
+            empty_label.setObjectName("emptyState")
+            device_layout.addWidget(empty_label)
+
         device_layout.addStretch()
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
         scroll_area.setHorizontalScrollBarPolicy(
             Qt.ScrollBarAsNeeded
@@ -115,7 +135,15 @@ class MyDevicesPage(QWidget):
             device_container
         )
 
-        layout.addWidget(scroll_area)
+        content_layout.addWidget(scroll_area)
+        content_layout.addStretch()
+
+        page_scroll_area = QScrollArea()
+        page_scroll_area.setObjectName("myDevicesScrollArea")
+        page_scroll_area.setWidgetResizable(True)
+        page_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        page_scroll_area.setWidget(content)
+        layout.addWidget(page_scroll_area)
 
     def _edit_device(self, device):
         self.usb_service.update_device(device)

@@ -1,7 +1,8 @@
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 
 from PySide6.QtWidgets import (
     QFrame,
+    QHBoxLayout,
     QLabel,
     QInputDialog,
     QLineEdit,
@@ -31,8 +32,11 @@ class UsbDeviceCard(QFrame):
             "deviceState",
             "configured" if configured_device is not None else "unconfigured",
         )
+        self.setObjectName("usbDeviceCard")
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
         if configured_device is not None:
             self._setup_configured_card(
@@ -54,26 +58,35 @@ class UsbDeviceCard(QFrame):
         configured_device,
         connected,
     ):
+        header = QHBoxLayout()
         self.nickname_label = QLabel(
             configured_device.nickname
         )
-
-        self.nickname_label.setStyleSheet(
-            "font-size: 16px; font-weight: bold;"
-        )
+        self.nickname_label.setObjectName("cardTitle")
+        self.nickname_label.setWordWrap(True)
 
         device_name = QLabel(
             self._get_device_name(device)
         )
+        device_name.setObjectName("mutedText")
+        device_name.setWordWrap(True)
 
-        status = QLabel(
-            "● Connected"
-            if connected
-            else "○ Disconnected"
+        status = QLabel("Connected" if connected else "Disconnected")
+        status.setObjectName("deviceStatus")
+        status.setProperty(
+            "connectionState",
+            "connected" if connected else "disconnected",
         )
+        status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        header.addWidget(self.nickname_label, 1)
+        header.addWidget(status)
+
+        buttons = QHBoxLayout()
 
         edit_button = QPushButton("Edit")
         delete_button = QPushButton("Delete")
+        delete_button.setObjectName("dangerButton")
 
         edit_button.clicked.connect(
             self._edit_device
@@ -83,25 +96,12 @@ class UsbDeviceCard(QFrame):
             self._delete_device
         )
 
-        layout.addWidget(
-            self.nickname_label
-        )
-
-        layout.addWidget(
-            device_name
-        )
-
-        layout.addWidget(
-            status
-        )
-
-        layout.addWidget(
-            edit_button
-        )
-
-        layout.addWidget(
-            delete_button
-        )
+        buttons.addWidget(edit_button)
+        buttons.addWidget(delete_button)
+        layout.addLayout(header)
+        layout.addWidget(device_name)
+        layout.addStretch()
+        layout.addLayout(buttons)
 
     def _setup_unconfigured_card(
         self,
@@ -109,13 +109,19 @@ class UsbDeviceCard(QFrame):
         device,
     ):
         name = QLabel(device.name)
+        name.setObjectName("cardTitle")
+        name.setWordWrap(True)
 
-        name.setStyleSheet(
-            "font-size: 16px; font-weight: bold;"
-        )
-
+        id_label = QLabel("DEVICE ID")
+        id_label.setObjectName("eyebrow")
         device_id = QLabel(
             device.windows_device_id
+        )
+        device_id.setObjectName("mutedText")
+        device_id.setWordWrap(True)
+        device_id.setToolTip(device.windows_device_id)
+        device_id.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
         )
 
         nickname_input = QLineEdit()
@@ -125,8 +131,9 @@ class UsbDeviceCard(QFrame):
         )
 
         add_button = QPushButton(
-            "Add Device"
+            "Add to My Devices"
         )
+        add_button.setObjectName("primaryButton")
 
         add_button.clicked.connect(
             lambda: self._add_device(
@@ -135,7 +142,9 @@ class UsbDeviceCard(QFrame):
         )
 
         layout.addWidget(name)
+        layout.addWidget(id_label)
         layout.addWidget(device_id)
+        layout.addStretch()
         layout.addWidget(nickname_input)
         layout.addWidget(add_button)
 

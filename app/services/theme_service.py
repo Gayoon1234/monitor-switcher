@@ -109,8 +109,72 @@ class ThemeService:
             QLabel {{
                 background-color: transparent;
             }}
+            QLabel#pageTitle {{
+                font-size: 26px;
+                font-weight: 700;
+            }}
+            QLabel#sectionTitle, QLabel#cardTitle {{
+                font-size: 16px;
+                font-weight: 700;
+            }}
+            QLabel#mutedText, QLabel#eyebrow {{
+                color: {colors["muted_text"]};
+            }}
+            QLabel#eyebrow {{
+                font-size: 10px;
+                font-weight: 700;
+            }}
+            QLabel#deviceStatus, QLabel#activityStatus {{
+                background-color: {colors["configured_background"]};
+                border: 1px solid {colors["configured_border"]};
+                border-radius: 9px;
+                padding: 3px 8px;
+                font-size: 11px;
+                font-weight: 700;
+            }}
+            QLabel#deviceStatus[connectionState="disconnected"],
+            QLabel#activityStatus[eventState="failed"] {{
+                background-color: {colors["unconfigured_background"]};
+                border-color: {colors["unconfigured_border"]};
+            }}
+            QLabel#activityTime {{
+                font-size: 14px;
+                font-weight: 700;
+            }}
+            QLabel#activityType {{
+                font-size: 12px;
+                font-weight: 700;
+            }}
+            QLabel#activityMessage {{
+                font-size: 13px;
+            }}
+            QLabel#activitySummary {{
+                color: {colors["muted_text"]};
+                background-color: {colors["surface"]};
+                border: 1px solid {colors["border"]};
+                border-radius: 10px;
+                padding: 7px 10px;
+            }}
+            QLabel#emptyState {{
+                color: {colors["muted_text"]};
+                background-color: {colors["surface"]};
+                border: 1px dashed {colors["border"]};
+                border-radius: 8px;
+                padding: 28px;
+            }}
             QMainWindow, QStackedWidget, QScrollArea {{
                 background-color: {colors["background"]};
+            }}
+            QFrame#displayCard, QFrame#activityItem {{
+                background-color: {colors["surface"]};
+                border: 1px solid {colors["border"]};
+                border-radius: 10px;
+            }}
+            QFrame#activityItem[eventState="success"] {{
+                border-left: 3px solid {colors["configured_border"]};
+            }}
+            QFrame#activityItem[eventState="failed"] {{
+                border-left: 3px solid {colors["unconfigured_border"]};
             }}
             QListWidget {{
                 background-color: {colors["surface"]};
@@ -175,6 +239,15 @@ class ThemeService:
             }}
             QPushButton:pressed {{
                 background-color: {colors["surface_alt"]};
+            }}
+            QPushButton#primaryButton {{
+                background-color: {colors["primary"]};
+                color: {colors["primary_text"]};
+                border-color: {colors["primary"]};
+                font-weight: 700;
+            }}
+            QPushButton#dangerButton:hover {{
+                border-color: {colors["unconfigured_border"]};
             }}
             QLineEdit::placeholder {{
                 color: {colors["muted_text"]};
