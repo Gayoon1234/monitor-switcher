@@ -72,11 +72,12 @@ class ActivityItem(QFrame):
 
 
 class ActivityPage(QWidget):
-    def __init__(self, activity_history=None):
+    def __init__(self, activity_history=None, days: int | None = 30):
         super().__init__()
         self.total_events = 0
         self.successful_events = 0
         self.failed_events = 0
+        self.days = days
 
         self._setup_ui()
 
@@ -130,7 +131,7 @@ class ActivityPage(QWidget):
     def add_event(self, event):
         if self.total_events == 0:
             self.activity_container.removeWidget(self.empty_state)
-            self.empty_state.deleteLater()
+            self.empty_state.hide()
 
         item = ActivityItem(event)
         self.activity_container.insertWidget(0, item)
@@ -141,6 +142,26 @@ class ActivityPage(QWidget):
         else:
             self.failed_events += 1
         self._update_summary()
+
+    def set_events(self, events) -> None:
+        while self.activity_container.count():
+            item = self.activity_container.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+
+        self.total_events = 0
+        self.successful_events = 0
+        self.failed_events = 0
+        if not events:
+            self.empty_state.show()
+            self.activity_container.addWidget(self.empty_state)
+            self.summary.setText("No events yet")
+            return
+
+        for event in events:
+            self.add_event(event)
 
     def _update_summary(self):
         self.summary.setText(

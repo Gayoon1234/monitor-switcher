@@ -95,10 +95,6 @@ window = MainWindow(
     theme_service=theme_service,
 )
 
-automation_service.activity_event.connect(
-    window.activity_page.add_event
-)
-
 window.show()
 
 

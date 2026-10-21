@@ -1,5 +1,7 @@
 from datetime import datetime
+from datetime import timedelta
 
+import pytest
 from app.models.activity_event import ActivityEvent
 from app.services.activity_repository import ActivityRepository
 
@@ -108,3 +110,47 @@ def test_events_persist_across_repository_instances(tmp_path):
         assert second_repository.load() == [event]
     finally:
         second_repository.close()
+
+
+def test_load_filters_old_events_without_deleting_them(tmp_path):
+    repository = ActivityRepository(tmp_path / "activity.db")
+    old_event = create_event(
+        timestamp=datetime.now() - timedelta(days=31),
+        message="Old event",
+    )
+    recent_event = create_event(
+        timestamp=datetime.now() - timedelta(days=2),
+        message="Recent event",
+    )
+
+    try:
+        repository.append(old_event)
+        repository.append(recent_event)
+
+        assert repository.load(30) == [recent_event]
+        assert repository.load() == [old_event, recent_event]
+    finally:
+        repository.close()
+
+
+def test_clear_deletes_all_activity_events(tmp_path):
+    repository = ActivityRepository(tmp_path / "activity.db")
+    repository.append(create_event())
+
+    try:
+        repository.clear()
+
+        assert repository.load() == []
+    finally:
+        repository.close()
+
+
+@pytest.mark.parametrize("days", [0, -1, 1.5, "30"])
+def test_load_rejects_invalid_day_count(tmp_path, days):
+    repository = ActivityRepository(tmp_path / "activity.db")
+
+    try:
+        with pytest.raises(ValueError):
+            repository.load(days)
+    finally:
+        repository.close()

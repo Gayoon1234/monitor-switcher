@@ -91,6 +91,12 @@ class MainWindow(QMainWindow):
             self.settings_page.theme_changed.connect(
                 self._set_active_theme
             )
+            self.settings_page.activity_days_changed.connect(
+                self._set_activity_period
+            )
+            self.settings_page.clear_activity_requested.connect(
+                self._clear_activity_history
+            )
             self.pages.addWidget(self.settings_page)
         else:
             self.pages.addWidget(QWidget())
@@ -106,6 +112,10 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(container)
 
+        self.automation_service.activity_event.connect(
+            self.activity_page.add_event
+        )
+
     def _set_active_theme(self, theme_name):
         self.theme_service.set_active_theme(theme_name)
         application = QApplication.instance()
@@ -113,3 +123,13 @@ class MainWindow(QMainWindow):
             application.setStyleSheet(
                 self.theme_service.get_stylesheet()
             )
+
+    def _set_activity_period(self, days):
+        self.activity_page.days = days
+        self.activity_page.set_events(
+            self.automation_service.get_activity_history(days)
+        )
+
+    def _clear_activity_history(self):
+        self.automation_service.clear_activity_history()
+        self.activity_page.set_events([])

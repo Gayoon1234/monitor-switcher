@@ -132,6 +132,11 @@ color values must be six-digit hex strings:
 }
 ```
 
+Activity history shows the last 30 days by default. In Settings, you can choose
+7, 30, 90, or 365 days, or show all saved events. Changing this filter does not
+delete older events. Use **Delete all activity logs** in Settings to permanently
+clear the activity database.
+
 ## Project layout
 
 ```text
