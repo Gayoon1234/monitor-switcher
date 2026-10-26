@@ -55,7 +55,7 @@ class ThemeService:
             "muted_text": "#493a59",
             "primary": "#7209b7",
             "primary_text": "#ffffff",
-            "border": "#f15bb5",
+            "border": "#1d3557",
             "configured_background": "#b7ef8a",
             "configured_border": "#287a2a",
             "unconfigured_background": "#ffadad",
@@ -253,6 +253,7 @@ class ThemeService:
             QListWidget::item:selected {{
                 background-color: {colors["primary"]};
                 color: {colors["primary_text"]};
+                border-radius: 6px;
             }}
             QPushButton, QLineEdit, QComboBox {{
                 background-color: {colors["surface"]};

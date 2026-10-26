@@ -139,6 +139,14 @@ def test_harlequin_palette_has_readable_text_contrast(tmp_path):
     assert palette["border"] != palette["primary"]
 
 
+def test_harlequin_components_use_dark_blue_borders(tmp_path):
+    service = ThemeService("theme.json")
+    service.set_active_theme("harlequin")
+
+    assert "#f15bb5" not in service.get_stylesheet()
+    assert "border: 1px solid #1d3557" in service.get_stylesheet()
+
+
 def test_legacy_colors_theme_file_still_loads(tmp_path):
     path = tmp_path / "theme.json"
     path.write_text(
@@ -156,6 +164,8 @@ def test_stylesheet_does_not_add_borders_to_every_frame(tmp_path):
     stylesheet = ThemeService(str(tmp_path / "missing.json")).get_stylesheet()
 
     assert "QFrame {" not in stylesheet
+    assert "QListWidget::item:selected" in stylesheet
+    assert "border-radius: 6px;" in stylesheet
     assert "QScrollBar:vertical" in stylesheet
     assert "QScrollBar:horizontal" in stylesheet
     assert "QScrollBar::handle:vertical" in stylesheet
