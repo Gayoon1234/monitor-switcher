@@ -1,125 +1,236 @@
 # Monitor Switcher
 
-Monitor Switcher is a Windows desktop utility for automatically switching monitor inputs when USB devices connect or disconnect.
+Monitor Switcher is a Windows desktop utility for automatically switching monitor inputs when a specific USB device connects or disconnects.
 
-It is designed for setups where a display should change to a specific source when a particular device is plugged in or removed, such as switching a monitor to a laptop, console, or docking station based on USB activity.
+It is designed for setups where a display should change to the correct source when a laptop, dock, console, or other USB device appears. Typical uses include:
+
+- switching a monitor to a laptop dock when the dock is plugged in
+- changing a TV or monitor to a console when a controller/console adapter is connected
+- switching back to a different input when the device is unplugged
+
+## What the software does
+
+The app does three things:
+
+1. Discovers connected displays and their supported inputs.
+2. Tracks USB devices currently connected to the machine.
+3. Runs user-defined automations to switch a display to a target input when a configured USB event occurs.
+
+The software uses Windows WMI and the `monitorcontrol` library to enumerate hardware, then exposes the result through a PySide6 desktop UI.
 
 ## Features
 
-- Discover available displays and their supported inputs
-- Track USB devices that are currently present
-- Save configured USB devices with friendly nicknames
-- Create automations that trigger on device connect or disconnect events
-- Switch a display to a target input when the automation fires
-- Keep a local activity log of device and automation events
-- Persist configuration in a local JSON file
-
-## How it works
-
-The application monitors:
-
-- Windows display devices and their inputs
-- USB device connect/disconnect events
-
-When a configured USB device matches an automation trigger, it executes one or more actions such as switching a display to a specific input. This enables simple "plug in device, monitor changes to the right port" workflows.
+- Discover current displays and list valid input sources
+- Monitor USB device connect/disconnect events
+- Save configured USB devices with friendly labels
+- Create automations based on device connection state
+- Switch a display to a target input when an automation triggers
+- Keep a local activity log of automation and device events
+- Persist configuration in JSON files and SQLite activity history
+- Change the UI theme from Settings
 
 ## Requirements
 
 - Windows 10 or Windows 11
 - Python 3.11 or newer
-- Access to the Windows device APIs used by the app
+- A machine with a supported monitor that can be controlled through Windows APIs
+- A monitor and USB device setup that you want to automate
 
 ## Installation
 
 1. Clone the repository.
-2. Create and activate a virtual environment:
+2. Open a terminal in the project root.
+3. Create and activate a virtual environment:
 
-   ```bash
+   ```powershell
    python -m venv .venv
-   .venv\Scripts\activate
+   .\.venv\Scripts\Activate.ps1
    ```
 
-3. Install dependencies:
+4. Install the project dependencies:
 
-   ```bash
+   ```powershell
    pip install -r requirements.txt
    ```
 
 ## Running the app
 
-From the project root:
+From the project root, start the app with:
 
-```bash
+```powershell
 python main.py
 ```
 
 This launches the PySide6 desktop application.
 
-## Configuration
+### Command-line interface
 
-The app stores config data in a local `config.json` file created in the project root. It can contain:
+The same device, display, automation, activity, and settings workflows are
+available from the CLI:
 
-- `usb_devices`: configured USB devices
-- `automations`: automation rules triggered by USB events
-- `displays`: discovered monitor definitions and inputs
+```powershell
+python -m app.cli --help
+python -m app.cli find-my-device list
+python -m app.cli my-devices list
+python -m app.cli my-devices displays list
+python -m app.cli my-devices displays switch display-001 HDMI2
+python -m app.cli automations list
+python -m app.cli activity list --days 30
+```
 
-A simplified example:
+To detect and save a newly connected device:
+
+```powershell
+python -m app.cli find-my-device detect --timeout 60 --nickname "Laptop Dock"
+```
+
+Create an automation using the saved device and display IDs:
+
+```powershell
+python -m app.cli automations add "Dock connected" `
+  --when connected --device "<saved-device-id>" `
+  --display display-001 --input HDMI2
+python -m app.cli automations watch
+```
+
+Run `python -m app.cli <command> --help` for the available options. Both
+interfaces use the same `config.json`, `theme.json`, and `activity.db` files.
+
+## Typical usage workflow
+
+### 1. Start the app
+
+When the main window opens, you will see a sidebar with these sections:
+
+- My Devices
+- Find My Device
+- Automations
+- Activity
+- Settings
+
+### 2. Add or detect USB devices
+
+Use the Find My Device page to discover connected USB hardware.
+
+- Click `Detect New Device`.
+- Connect the target USB device.
+- The app will detect the new device and show it as a card.
+- Add it with a nickname such as `Laptop Dock`, `Nintendo Switch`, or `Work USB`.
+
+You can also review previously configured devices on the My Devices page.
+
+### 3. Review displays and inputs
+
+On My Devices:
+
+- Displays are listed with their detected name and available inputs.
+- Each display card shows the current input if the hardware reports it.
+- If needed, you can manually trigger a switch from the card actions.
+
+### 4. Create an automation
+
+Open Automations and click `Add Automation`.
+
+Configure:
+
+- a trigger type: connected or disconnected
+- the USB device to watch
+- one or more actions: switch a display to a specific input
+
+Example:
+
+- Trigger: `Laptop Dock connected`
+- Action: switch `Living Room Monitor` to `HDMI 2`
+
+When the dock is plugged in, the app will send the input-change command to the selected display.
+
+### 5. Check activity and logs
+
+The Activity page shows device and automation events, including success/failure state.
+
+The Settings page lets you:
+
+- choose the UI theme
+- filter activity history by time range
+- clear all saved activity logs
+
+## Configuration files
+
+The project stores configuration in the repository root:
+
+- `config.json` stores configured USB devices, displays, and automations
+- `theme.json` stores the selected application theme and custom colors
+- `activity.db` stores the event log used by the Activity page
+
+If the app starts with no `config.json`, it will discover current displays and save them automatically.
+
+A simplified example of the persisted config looks like this:
 
 ```json
 {
   "usb_devices": [
     {
-      "id": "device1",
+      "id": "device-uuid",
       "windows_device_id": "USB\\VID_1234&PID_5678\\...",
       "nickname": "Laptop Dock"
     }
   ],
   "automations": [
     {
-      "id": "automation1",
+      "id": "automation-001",
       "name": "Dock connected",
       "enabled": true,
       "trigger": {
         "type": "device_connected",
-        "device_id": "device1"
+        "device_id": "device-uuid"
       },
       "actions": [
         {
           "type": "switch_input",
-          "display_id": "display1",
-          "input_id": "HDMI1"
+          "display_id": "display-001",
+          "input_id": "HDMI2"
         }
       ]
     }
   ],
   "displays": [
     {
-      "id": "display1",
+      "id": "display-001",
       "name": "Living Room Monitor",
       "windows_device_id": "DISPLAY\\...",
       "inputs": [
-        {"input_id": "HDMI1", "input_type": "HDMI"}
+        {"input_id": "HDMI2", "input_type": "HDMI"}
       ]
     }
   ]
 }
 ```
 
+## Important implementation notes
+
+- This project is tightly targeted at Windows. It depends on `pywin32` and the Windows WMI APIs.
+- By default, the app watches all connected USB devices and emits a device event for each one that connects or disconnects.
+- The current automation model is intentionally simple: it can trigger on USB connect/disconnect and execute a switch-input action.
+- The app is best suited to local desktop usage on a single Windows machine with direct access to the display hardware.
+
 ## Project layout
 
 ```text
 app/
   hardware/        Windows monitor and USB integration
-  models/         Data models for displays, USB devices, and automations
-  services/       Loading, saving, switching, and automation logic
-  ui/             PySide6 user interface screens and widgets
-main.py           Application entry point
-requirements.txt  Python dependencies
-tests/            Automated test coverage for repository and service behavior
+  models/          Data models for displays, USB devices, and automations
+  services/        Loading, saving, switching, and automation logic
+  ui/              PySide6 user interface screens and widgets
+  cli/            Command-line equivalents of the UI workflows
+main.py            Application entry point
+requirements.txt   Python dependencies
+config.json        Local runtime configuration
+theme.json         UI palette definitions
+activity.db        Activity log database
+tests/             Automated unit tests
+docs/              Technical implementation notes
 ```
 
-## Notes
+## Further reading
 
-- This project currently targets Windows-specific hardware APIs and is not intended to be a cross-platform application.
-- The app is best suited to local desktop usage with direct monitor access on a Windows machine.
-- If no config exists yet, the app will discover current displays and persist them automatically.
+- [docs/technical-implementation.md](docs/technical-implementation.md)

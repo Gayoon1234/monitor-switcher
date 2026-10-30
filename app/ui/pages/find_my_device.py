@@ -3,11 +3,13 @@ import uuid
 from PySide6.QtCore import QTimer, Qt
 
 from PySide6.QtWidgets import (
+    QFrame,
     QGridLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -44,8 +46,12 @@ class FindMyDevicePage(QWidget):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
+        self.page_layout = layout
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(12)
 
         title = QLabel("Find My Device")
+        title.setObjectName("pageTitle")
         layout.addWidget(title)
 
         mode_layout = QHBoxLayout()
@@ -67,7 +73,8 @@ class FindMyDevicePage(QWidget):
         layout.addLayout(mode_layout)
 
         self.content_layout = QVBoxLayout()
-        layout.addLayout(self.content_layout)
+        self.content_layout.setSpacing(12)
+        layout.addLayout(self.content_layout, 1)
 
         self._show_all_devices()
 
@@ -79,16 +86,19 @@ class FindMyDevicePage(QWidget):
         self._stop_detection()
         self._clear_content()
 
-        self.content_layout.addWidget(
-            QLabel("All Devices")
-        )
+        section_title = QLabel("Connected devices")
+        section_title.setObjectName("sectionTitle")
+        self.content_layout.addWidget(section_title)
 
         device_container = QWidget()
+        device_container.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Expanding,
+        )
 
         device_layout = QGridLayout(device_container)
-        device_layout.setAlignment(
-            Qt.AlignLeft | Qt.AlignTop
-        )
+        device_layout.setColumnStretch(0, 1)
+        device_layout.setColumnStretch(1, 1)
 
         devices = self.usb_service.get_devices()
         configured_devices = (
@@ -100,7 +110,7 @@ class FindMyDevicePage(QWidget):
             for device in configured_devices
         }
 
-        columns = 3
+        columns = 2
 
         if not devices:
             device_layout.addWidget(
@@ -114,6 +124,7 @@ class FindMyDevicePage(QWidget):
 
                 row = index // columns
                 column = index % columns
+                device_layout.setRowStretch(row, 1)
 
                 configured_device = (
                     configured_devices_by_windows_id.get(
@@ -127,7 +138,10 @@ class FindMyDevicePage(QWidget):
                     connected=True,
                 )
 
-                card.setFixedWidth(250)
+                card.setSizePolicy(
+                    QSizePolicy.Policy.Expanding,
+                    QSizePolicy.Policy.Expanding,
+                )
 
                 if configured_device is None:
                     card.add_device_requested.connect(
@@ -150,23 +164,22 @@ class FindMyDevicePage(QWidget):
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarAlwaysOff
+        )
         scroll_area.setWidget(device_container)
 
-        self.content_layout.addWidget(
-            scroll_area
-        )
+        self.content_layout.addWidget(scroll_area, 1)
 
         refresh_button = QPushButton("Refresh")
+        refresh_button.setObjectName("refreshButton")
 
         refresh_button.clicked.connect(
             self._show_all_devices
         )
 
-        self.content_layout.addWidget(
-            refresh_button
-        )
-
-        self.content_layout.addStretch()
+        self.content_layout.addWidget(refresh_button)
 
     def _refresh(self):
         self._show_all_devices()
@@ -179,9 +192,9 @@ class FindMyDevicePage(QWidget):
         self._stop_detection()
         self._clear_content()
 
-        self.content_layout.addWidget(
-            QLabel("Detect New Device")
-        )
+        section_title = QLabel("Detect a device")
+        section_title.setObjectName("sectionTitle")
+        self.content_layout.addWidget(section_title)
 
         detection_container = QWidget()
 

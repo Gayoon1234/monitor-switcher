@@ -133,5 +133,11 @@ class AutomationService(QObject):
         self.activity_repository.append(event)
         self.activity_event.emit(event)
 
-    def get_activity_history(self) -> list[ActivityEvent]:
-        return self.activity_repository.load()
+    def get_activity_history(
+        self,
+        days: int | None = 30,
+    ) -> list[ActivityEvent]:
+        return self.activity_repository.load(days)
+
+    def clear_activity_history(self) -> None:
+        self.activity_repository.clear()
