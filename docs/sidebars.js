@@ -28,7 +28,10 @@ const sidebars = {
             {
               type: 'category',
               label: 'Event Models',
-              items: ['models/Event Models/activity-event'],
+              items: [
+                'models/Event Models/activity-event',
+                'models/Event Models/device-event',
+              ],
             },
           ],
         },
