@@ -1,0 +1,62 @@
+/** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
+const sidebars = {
+  documentation: [
+    'index',
+    'technical-implementation',
+    {
+      type: 'category',
+      label: 'Application',
+      items: [
+        {
+          type: 'category',
+          label: 'CLI',
+          items: [
+            'cli/index',
+            'cli/commands/index',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Hardware',
+          items: ['hardware/index'],
+        },
+        {
+          type: 'category',
+          label: 'Models',
+          items: [
+            'models/index',
+            {
+              type: 'category',
+              label: 'Event Models',
+              items: ['models/Event Models/activity-event'],
+            },
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Services',
+          items: ['services/index'],
+        },
+        {
+          type: 'category',
+          label: 'UI',
+          items: [
+            'ui/index',
+            {
+              type: 'category',
+              label: 'Pages',
+              items: ['ui/pages/index'],
+            },
+            {
+              type: 'category',
+              label: 'Widgets',
+              items: ['ui/widgets/index'],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+module.exports = sidebars;

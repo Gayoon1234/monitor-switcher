@@ -14,3 +14,9 @@ dist/
 .vscode/
 
 *.log
+
+# Docusaurus
+docs/node_modules/
+docs/build/
+docs/.docusaurus/
+docs/.cache-loader/
