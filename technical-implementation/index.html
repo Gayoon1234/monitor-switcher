@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-technical-implementation" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.10.2">
+<title data-rh="true">Technical implementation | Monitor Switcher</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://gayoon1234.github.io/monitor-switcher/technical-implementation"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Technical implementation | Monitor Switcher"><meta data-rh="true" name="description" content="This document describes the architecture of Monitor Switcher, including the main data models, hardware integration, persistence layer, event flow, and UI structure."><meta data-rh="true" property="og:description" content="This document describes the architecture of Monitor Switcher, including the main data models, hardware integration, persistence layer, event flow, and UI structure."><link data-rh="true" rel="canonical" href="https://gayoon1234.github.io/monitor-switcher/technical-implementation"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/technical-implementation" hreflang="en"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/technical-implementation" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Technical implementation","item":"https://gayoon1234.github.io/monitor-switcher/technical-implementation"}]}</script><link rel="stylesheet" href="/monitor-switcher/assets/css/styles.9272167e.css">
+<script src="/monitor-switcher/assets/js/runtime~main.ecec4b24.js" defer="defer"></script>
+<script src="/monitor-switcher/assets/js/main.ec9a1c62.js" defer="defer"></script>
+</head>
+<body>
+<svg style="display: none;"><defs>
+<symbol id="theme-svg-external-link" viewBox="0 0 24 24"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"/></symbol>
+</defs></svg>
+<script>!function(){var t=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();document.documentElement.setAttribute("data-theme",t||"light"),document.documentElement.setAttribute("data-theme-choice",t||"light")}(),function(){try{const c=new URLSearchParams(window.location.search).entries();for(var[t,e]of c)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="Skip to main content"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">Skip to main content</a></div><nav aria-label="Main" class="theme-layout-navbar navbar navbar--fixed-top"><div class="navbar__inner"><div class="theme-layout-navbar-left navbar__items"><button aria-label="Toggle navigation bar" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/monitor-switcher/"><b class="navbar__title text--truncate">Monitor Switcher</b></a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/monitor-switcher/">Documentation</a></div><div class="theme-layout-navbar-right navbar__items navbar__items--right"><a href="https://github.com/Gayoon1234/monitor-switcher" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-label="(opens in new tab)" class="iconExternalLink_nPIU"><use href="#theme-svg-external-link"></use></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="system mode" aria-label="Switch between dark and light mode (currently system mode)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" class="toggleIcon_g3eP systemToggleIcon_QzmC"><path fill="currentColor" d="m12 21c4.971 0 9-4.029 9-9s-4.029-9-9-9-9 4.029-9 9 4.029 9 9 9zm4.95-13.95c1.313 1.313 2.05 3.093 2.05 4.95s-0.738 3.637-2.05 4.95c-1.313 1.313-3.093 2.05-4.95 2.05v-14c1.857 0 3.637 0.737 4.95 2.05z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="theme-layout-main main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="Scroll back to top" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="Docs sidebar" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/monitor-switcher/"><span class="linkLabel_WmDU">Monitor Switcher documentation</span></a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" href="/monitor-switcher/technical-implementation"><span class="linkLabel_WmDU">Technical implementation</span></a></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="categoryLink_byQd menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/monitor-switcher/cli/"><span class="categoryLinkLabel_W154">Application</span></a></div></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="Breadcrumbs"><ul class="breadcrumbs"><li class="breadcrumbs__item"><a aria-label="Home page" class="breadcrumbs__link" href="/monitor-switcher/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link">Technical implementation</span></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">On this page</button></div><div class="theme-doc-markdown markdown"><header><h1>Technical implementation</h1></header><p>This document describes the architecture of Monitor Switcher, including the main data models, hardware integration, persistence layer, event flow, and UI structure.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="1-system-overview">1. System overview<a href="#1-system-overview" class="hash-link" aria-label="Direct link to 1. System overview" title="Direct link to 1. System overview" translate="no">​</a></h2>
+<p>Monitor Switcher is a Windows desktop application with a layered architecture:</p>
+<ul>
+<li class="">hardware layer: Windows USB and monitor discovery / control</li>
+<li class="">domain model layer: lightweight dataclasses describing displays, USB devices, automations, and events</li>
+<li class="">service layer: repository access and business logic</li>
+<li class="">UI layer: PySide6 pages and widgets</li>
+</ul>
+<p>The app runs as a single desktop process and uses an event-driven loop to monitor USB state changes. When a configured device connects or disconnects, the app checks any matching automations and executes display input changes.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="2-runtime-flow">2. Runtime flow<a href="#2-runtime-flow" class="hash-link" aria-label="Direct link to 2. Runtime flow" title="Direct link to 2. Runtime flow" translate="no">​</a></h2>
+<p>The startup sequence in <code>main.py</code> is roughly:</p>
+<ol>
+<li class="">Create the Qt application.</li>
+<li class="">Build the theme service and apply the stylesheet.</li>
+<li class="">Instantiate Windows-specific hardware controllers.</li>
+<li class="">Load configuration from <code>config.json</code> and create the display service.</li>
+<li class="">Create the automation service and activity repository.</li>
+<li class="">Start the USB polling timer.</li>
+<li class="">Open the main window.</li>
+</ol>
+<p>The runtime flow is:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token plain">USB polling timer</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">   -&gt; UsbMonitorService._check_device()</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">   -&gt; emits DeviceEvent</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">   -&gt; AutomationService.handle_device_event()</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">   -&gt; matches trigger</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">   -&gt; DisplayService.switch_input()</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">   -&gt; WindowsMonitorController.switch_input()</span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">   -&gt; monitorcontrol input source change</span><br></div></code></pre></div></div>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="3-data-models">3. Data models<a href="#3-data-models" class="hash-link" aria-label="Direct link to 3. Data models" title="Direct link to 3. Data models" translate="no">​</a></h2>
+<p>The domain layer is intentionally small and centered on dataclasses.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="31-display-hierarchy">3.1 Display hierarchy<a href="#31-display-hierarchy" class="hash-link" aria-label="Direct link to 3.1 Display hierarchy" title="Direct link to 3.1 Display hierarchy" translate="no">​</a></h3>
+<p>Defined in <code>app/models/display.py</code>.</p>
+<ul>
+<li class="">
+<p><code>InputType</code> is an enum for supported monitor input families:</p>
+<ul>
+<li class="">HDMI</li>
+<li class="">ANALOG</li>
+<li class="">DVI</li>
+<li class="">DP</li>
+<li class="">COMPOSITE</li>
+</ul>
+</li>
+<li class="">
+<p><code>DisplayInput</code></p>
+<ul>
+<li class=""><code>input_id</code>: the input identifier used by monitorcontrol / Windows</li>
+<li class=""><code>input_type</code>: the normalized category for the input</li>
+</ul>
+</li>
+<li class="">
+<p><code>Display</code></p>
+<ul>
+<li class=""><code>id</code>: internal ID used in config and automation rules</li>
+<li class=""><code>name</code>: display label shown in the UI</li>
+<li class=""><code>windows_device_id</code>: Windows PnP device ID</li>
+<li class=""><code>inputs</code>: list of supported inputs</li>
+<li class=""><code>current_input</code>: last known active input</li>
+</ul>
+</li>
+</ul>
+<p>This structure is persisted to <code>config.json</code> and used to map monitor IDs to actual hardware devices.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="32-usb-device-models">3.2 USB device models<a href="#32-usb-device-models" class="hash-link" aria-label="Direct link to 3.2 USB device models" title="Direct link to 3.2 USB device models" translate="no">​</a></h3>
+<p>Defined in <code>app/models/usb_device.py</code>.</p>
+<ul>
+<li class="">
+<p><code>UsbDevice</code></p>
+<ul>
+<li class="">represents a discovered device that is connected right now</li>
+<li class="">fields: <code>windows_device_id</code>, <code>name</code></li>
+</ul>
+</li>
+<li class="">
+<p><code>ConfiguredUsbDevice</code></p>
+<ul>
+<li class="">represents a user-saved USB device configuration</li>
+<li class="">fields: <code>id</code>, <code>windows_device_id</code>, <code>nickname</code></li>
+</ul>
+</li>
+</ul>
+<p>The UI keeps a distinction between a live connected device and a configured device entry so the same physical hardware can appear in multiple states.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="33-automation-model">3.3 Automation model<a href="#33-automation-model" class="hash-link" aria-label="Direct link to 3.3 Automation model" title="Direct link to 3.3 Automation model" translate="no">​</a></h3>
+<p>Defined in <code>app/models/automation.py</code>.</p>
+<ul>
+<li class="">
+<p><code>TriggerType</code></p>
+<ul>
+<li class=""><code>DEVICE_CONNECTED</code></li>
+<li class=""><code>DEVICE_DISCONNECTED</code></li>
+</ul>
+</li>
+<li class="">
+<p><code>ActionType</code></p>
+<ul>
+<li class=""><code>SWITCH_INPUT</code></li>
+<li class=""><code>DO_NOTHING</code></li>
+</ul>
+</li>
+<li class="">
+<p><code>Trigger</code></p>
+<ul>
+<li class=""><code>type</code>: trigger event type</li>
+<li class=""><code>device_id</code>: which configured USB device should trigger it</li>
+</ul>
+</li>
+<li class="">
+<p><code>Action</code></p>
+<ul>
+<li class=""><code>type</code>: action kind</li>
+<li class=""><code>display_id</code>: target display</li>
+<li class=""><code>input_id</code>: target input source on that display</li>
+</ul>
+</li>
+<li class="">
+<p><code>Automation</code></p>
+<ul>
+<li class=""><code>id</code>, <code>name</code>, <code>enabled</code>, <code>trigger</code>, <code>actions</code></li>
+</ul>
+</li>
+</ul>
+<p>The automation format is intentionally simple: the app currently focuses on a single event type and a single action type.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="34-event-models">3.4 Event models<a href="#34-event-models" class="hash-link" aria-label="Direct link to 3.4 Event models" title="Direct link to 3.4 Event models" translate="no">​</a></h3>
+<p>Defined in <code>app/models/device_event.py</code> and <code>app/models/activity_event.py</code>.</p>
+<ul>
+<li class="">
+<p><code>DeviceEvent</code></p>
+<ul>
+<li class="">carries <code>device_id</code> and <code>event_type</code> (<code>connected</code> or <code>disconnected</code>)</li>
+</ul>
+</li>
+<li class="">
+<p><code>ActivityEvent</code></p>
+<ul>
+<li class="">stores timestamp, event type, message, and success flag</li>
+</ul>
+</li>
+</ul>
+<p>The activity log is written to SQLite so the UI can present a time-bounded event history without losing detail.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="4-persistence-and-storage">4. Persistence and storage<a href="#4-persistence-and-storage" class="hash-link" aria-label="Direct link to 4. Persistence and storage" title="Direct link to 4. Persistence and storage" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="41-json-configuration">4.1 JSON configuration<a href="#41-json-configuration" class="hash-link" aria-label="Direct link to 4.1 JSON configuration" title="Direct link to 4.1 JSON configuration" translate="no">​</a></h3>
+<p><code>ConfigRepository</code> in <code>app/services/config_repository.py</code> saves and loads the app&#x27;s state from <code>config.json</code>.</p>
+<p>It handles three collections:</p>
+<ul>
+<li class=""><code>usb_devices</code></li>
+<li class=""><code>automations</code></li>
+<li class=""><code>displays</code></li>
+</ul>
+<p>The repository converts dataclasses to dictionaries for JSON serialization and rehydrates them when the app starts.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="42-sqlite-activity-log">4.2 SQLite activity log<a href="#42-sqlite-activity-log" class="hash-link" aria-label="Direct link to 4.2 SQLite activity log" title="Direct link to 4.2 SQLite activity log" translate="no">​</a></h3>
+<p><code>ActivityRepository</code> in <code>app/services/activity_repository.py</code> uses SQLite to store the event log in <code>activity.db</code>.</p>
+<p>Schema:</p>
+<div class="language-sql codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-sql codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#393A34"><span class="token keyword" style="color:#00009f">CREATE</span><span class="token plain"> </span><span class="token keyword" style="color:#00009f">TABLE</span><span class="token plain"> </span><span class="token keyword" style="color:#00009f">IF</span><span class="token plain"> </span><span class="token operator" style="color:#393A34">NOT</span><span class="token plain"> </span><span class="token keyword" style="color:#00009f">EXISTS</span><span class="token plain"> activity_events </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">    id </span><span class="token keyword" style="color:#00009f">INTEGER</span><span class="token plain"> </span><span class="token keyword" style="color:#00009f">PRIMARY</span><span class="token plain"> </span><span class="token keyword" style="color:#00009f">KEY</span><span class="token plain"> AUTOINCREMENT</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">    </span><span class="token keyword" style="color:#00009f">timestamp</span><span class="token plain"> </span><span class="token keyword" style="color:#00009f">TEXT</span><span class="token plain"> </span><span class="token operator" style="color:#393A34">NOT</span><span class="token plain"> </span><span class="token boolean" style="color:#36acaa">NULL</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">    event_type </span><span class="token keyword" style="color:#00009f">TEXT</span><span class="token plain"> </span><span class="token operator" style="color:#393A34">NOT</span><span class="token plain"> </span><span class="token boolean" style="color:#36acaa">NULL</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">    message </span><span class="token keyword" style="color:#00009f">TEXT</span><span class="token plain"> </span><span class="token operator" style="color:#393A34">NOT</span><span class="token plain"> </span><span class="token boolean" style="color:#36acaa">NULL</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain">    success </span><span class="token keyword" style="color:#00009f">INTEGER</span><span class="token plain"> </span><span class="token operator" style="color:#393A34">NOT</span><span class="token plain"> </span><span class="token boolean" style="color:#36acaa">NULL</span><span class="token plain"></span><br></div><div class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">)</span><br></div></code></pre></div></div>
+<p>It supports:</p>
+<ul>
+<li class="">append event rows</li>
+<li class="">load recent events in a time range</li>
+<li class="">clear all activity history</li>
+</ul>
+<p>The activity page uses a <code>days</code> filter (<code>7</code>, <code>30</code>, <code>90</code>, <code>365</code>, or all) to decide which entries to show while preserving older rows in the database.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="5-hardware-layer">5. Hardware layer<a href="#5-hardware-layer" class="hash-link" aria-label="Direct link to 5. Hardware layer" title="Direct link to 5. Hardware layer" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="51-usb-monitor-abstraction">5.1 USB monitor abstraction<a href="#51-usb-monitor-abstraction" class="hash-link" aria-label="Direct link to 5.1 USB monitor abstraction" title="Direct link to 5.1 USB monitor abstraction" translate="no">​</a></h3>
+<p>Defined in <code>app/hardware/usb.py</code>.</p>
+<ul>
+<li class=""><code>UsbDeviceMonitor</code> is an abstract interface with a single method: <code>get_devices()</code></li>
+</ul>
+<p>The concrete implementation is <code>WindowsUsbDeviceMonitor</code> in <code>app/hardware/windows_usb.py</code>.</p>
+<p>It enumerates all present Windows PnP devices, filters those whose <code>DeviceID</code> starts with <code>USB\\</code>, and converts them into <code>UsbDevice</code> objects.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="52-display-monitor-abstraction">5.2 Display monitor abstraction<a href="#52-display-monitor-abstraction" class="hash-link" aria-label="Direct link to 5.2 Display monitor abstraction" title="Direct link to 5.2 Display monitor abstraction" translate="no">​</a></h3>
+<p>Defined in <code>app/hardware/monitor.py</code>.</p>
+<ul>
+<li class=""><code>MonitorController</code> defines <code>switch_input(display_id, input_id)</code></li>
+<li class=""><code>DisplayDiscovery</code> defines <code>get_displays()</code></li>
+</ul>
+<p>The concrete implementation is <code>WindowsMonitorController</code> in <code>app/hardware/windows_monitor.py</code>.</p>
+<p>That class combines:</p>
+<ul>
+<li class=""><code>win32com.client</code> to enumerate <code>Win32_PnPEntity</code> devices and locate matching monitors</li>
+<li class=""><code>monitorcontrol</code> to query and change monitor input sources</li>
+<li class="">a map of display IDs to live <code>monitorcontrol</code> monitor objects</li>
+</ul>
+<p>The controller supports reading available inputs for each monitor, detecting the current input, and switching the display to a selected source.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="6-services-layer">6. Services layer<a href="#6-services-layer" class="hash-link" aria-label="Direct link to 6. Services layer" title="Direct link to 6. Services layer" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="61-displayservice">6.1 DisplayService<a href="#61-displayservice" class="hash-link" aria-label="Direct link to 6.1 DisplayService" title="Direct link to 6.1 DisplayService" translate="no">​</a></h3>
+<p><code>DisplayService</code> in <code>app/services/display_service.py</code> is responsible for:</p>
+<ul>
+<li class="">loading persisted displays from config</li>
+<li class="">discovering active displays if no config exists</li>
+<li class="">refreshing current input state</li>
+<li class="">switching a display to a requested input</li>
+</ul>
+<p>This service keeps the UI and automation logic decoupled from the raw monitor APIs.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="62-usbservice">6.2 UsbService<a href="#62-usbservice" class="hash-link" aria-label="Direct link to 6.2 UsbService" title="Direct link to 6.2 UsbService" translate="no">​</a></h3>
+<p><code>UsbService</code> in <code>app/services/usb_service.py</code> handles configured USB devices and emits a <code>devices_changed</code> signal when the saved device set changes.</p>
+<p>It exposes:</p>
+<ul>
+<li class=""><code>get_devices()</code>: current live USB devices</li>
+<li class=""><code>get_configured_devices()</code>: saved USB devices from config</li>
+<li class=""><code>add_device()</code>, <code>update_device()</code>, <code>remove_device()</code></li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="63-usbmonitorservice">6.3 UsbMonitorService<a href="#63-usbmonitorservice" class="hash-link" aria-label="Direct link to 6.3 UsbMonitorService" title="Direct link to 6.3 UsbMonitorService" translate="no">​</a></h3>
+<p><code>UsbMonitorService</code> in <code>app/services/usb_monitor_service.py</code> polls the live USB device list on a timer (default 500 ms) and compares the current state to the previous state.</p>
+<p>When the state changes, it emits a <code>DeviceEvent</code> with either:</p>
+<ul>
+<li class=""><code>connected</code></li>
+<li class=""><code>disconnected</code></li>
+</ul>
+<p>This is the core trigger path for automations.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="64-automationservice">6.4 AutomationService<a href="#64-automationservice" class="hash-link" aria-label="Direct link to 6.4 AutomationService" title="Direct link to 6.4 AutomationService" translate="no">​</a></h3>
+<p><code>AutomationService</code> in <code>app/services/automation_service.py</code> is the central automation engine.</p>
+<p>It receives device events, checks whether any automation matches the event, and if so executes the configured actions.</p>
+<p>The logic is:</p>
+<ul>
+<li class="">ignore disabled automations</li>
+<li class="">match by <code>device_id</code></li>
+<li class="">match by connected/disconnected event type</li>
+<li class="">call <code>DisplayService.switch_input()</code> for each action</li>
+<li class="">log activity entries for both trigger events and action outcomes</li>
+</ul>
+<p>The service also exposes <code>get_activity_history()</code> and <code>clear_activity_history()</code> for the Activity page.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="65-themeservice">6.5 ThemeService<a href="#65-themeservice" class="hash-link" aria-label="Direct link to 6.5 ThemeService" title="Direct link to 6.5 ThemeService" translate="no">​</a></h3>
+<p><code>ThemeService</code> in <code>app/services/theme_service.py</code> loads and validates application palettes from <code>theme.json</code> and builds a stylesheet for the PySide6 UI. It supports predefined themes such as:</p>
+<ul>
+<li class="">dark</li>
+<li class="">light</li>
+<li class="">hacker</li>
+<li class="">harlequin</li>
+</ul>
+<p>The selected theme is saved between sessions.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="7-ui-layer">7. UI layer<a href="#7-ui-layer" class="hash-link" aria-label="Direct link to 7. UI layer" title="Direct link to 7. UI layer" translate="no">​</a></h2>
+<p>The app uses PySide6 widgets organized around a main window and multiple pages.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="71-mainwindow">7.1 MainWindow<a href="#71-mainwindow" class="hash-link" aria-label="Direct link to 7.1 MainWindow" title="Direct link to 7.1 MainWindow" translate="no">​</a></h3>
+<p><code>app/ui/main_window.py</code> creates the sidebar and stacked pages:</p>
+<ul>
+<li class="">My Devices</li>
+<li class="">Find My Device</li>
+<li class="">Automations</li>
+<li class="">Activity</li>
+<li class="">Settings</li>
+</ul>
+<p>It also connects the automation service&#x27;s <code>activity_event</code> signal to the activity page so new events update the view in real time.</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="72-pages">7.2 Pages<a href="#72-pages" class="hash-link" aria-label="Direct link to 7.2 Pages" title="Direct link to 7.2 Pages" translate="no">​</a></h3>
+<ul>
+<li class=""><code>MyDevicesPage</code>: displays configured displays and saved USB devices</li>
+<li class=""><code>FindMyDevicePage</code>: lets the user detect and add a USB device</li>
+<li class=""><code>AutomationsPage</code>: add/edit/delete automations</li>
+<li class=""><code>ActivityPage</code>: shows filtered event history</li>
+<li class=""><code>SettingsPage</code>: theme and activity history controls</li>
+</ul>
+<p>The UI is designed to keep the core device and automation state in services while the page widgets remain thin wrappers around that state.</p>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="8-libraries-and-dependencies">8. Libraries and dependencies<a href="#8-libraries-and-dependencies" class="hash-link" aria-label="Direct link to 8. Libraries and dependencies" title="Direct link to 8. Libraries and dependencies" translate="no">​</a></h2>
+<p>The project uses the following packages:</p>
+<ul>
+<li class=""><code>PySide6</code> for the desktop UI</li>
+<li class=""><code>monitorcontrol</code> for monitor input enumeration and switching</li>
+<li class=""><code>pywin32</code> for Windows COM / WMI access</li>
+<li class=""><code>Pillow</code> for image support and UI-related utilities</li>
+<li class=""><code>pystray</code> as a tray helper option in the project ecosystem</li>
+<li class=""><code>sqlite3</code> (standard library) for activity persistence</li>
+<li class=""><code>json</code> and <code>pathlib</code> (standard library) for config persistence</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="9-current-design-constraints-and-extension-points">9. Current design constraints and extension points<a href="#9-current-design-constraints-and-extension-points" class="hash-link" aria-label="Direct link to 9. Current design constraints and extension points" title="Direct link to 9. Current design constraints and extension points" translate="no">​</a></h2>
+<p>The project is intentionally narrow and practical, but a few design constraints matter:</p>
+<ul>
+<li class="">it is Windows-specific and not cross-platform</li>
+<li class="">the automation system currently watches only a single USB monitor loop in <code>main.py</code></li>
+<li class="">automation triggers are limited to device connect/disconnect</li>
+<li class="">action types are limited to switching display inputs</li>
+<li class="">display discovery depends on monitor enumeration behavior on each machine</li>
+</ul>
+<p>The architecture is structured to be expanded:</p>
+<ul>
+<li class="">additional trigger types can be added to <code>TriggerType</code></li>
+<li class="">additional action types can be added to <code>ActionType</code></li>
+<li class="">new hardware adapters can be introduced behind the monitor/USB abstractions</li>
+<li class="">more complex automation logic can be introduced in the service layer without changing the UI drastically</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="10-summary">10. Summary<a href="#10-summary" class="hash-link" aria-label="Direct link to 10. Summary" title="Direct link to 10. Summary" translate="no">​</a></h2>
+<p>Monitor Switcher is a small automation tool for Windows desktops that translates USB hardware events into monitor input changes. The architecture is intentionally simple: a hardware abstraction layer, a thin service layer, a dataclass-based domain model, and a PySide6 UI backed by config and SQLite persistence.</p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col noPrint_WFHX"><a href="https://github.com/Gayoon1234/monitor-switcher/edit/main/docs/technical-implementation.md" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>Edit this page</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/monitor-switcher/"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">Monitor Switcher documentation</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/monitor-switcher/cli/"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">CLI</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#1-system-overview" class="table-of-contents__link toc-highlight">1. System overview</a></li><li><a href="#2-runtime-flow" class="table-of-contents__link toc-highlight">2. Runtime flow</a></li><li><a href="#3-data-models" class="table-of-contents__link toc-highlight">3. Data models</a><ul><li><a href="#31-display-hierarchy" class="table-of-contents__link toc-highlight">3.1 Display hierarchy</a></li><li><a href="#32-usb-device-models" class="table-of-contents__link toc-highlight">3.2 USB device models</a></li><li><a href="#33-automation-model" class="table-of-contents__link toc-highlight">3.3 Automation model</a></li><li><a href="#34-event-models" class="table-of-contents__link toc-highlight">3.4 Event models</a></li></ul></li><li><a href="#4-persistence-and-storage" class="table-of-contents__link toc-highlight">4. Persistence and storage</a><ul><li><a href="#41-json-configuration" class="table-of-contents__link toc-highlight">4.1 JSON configuration</a></li><li><a href="#42-sqlite-activity-log" class="table-of-contents__link toc-highlight">4.2 SQLite activity log</a></li></ul></li><li><a href="#5-hardware-layer" class="table-of-contents__link toc-highlight">5. Hardware layer</a><ul><li><a href="#51-usb-monitor-abstraction" class="table-of-contents__link toc-highlight">5.1 USB monitor abstraction</a></li><li><a href="#52-display-monitor-abstraction" class="table-of-contents__link toc-highlight">5.2 Display monitor abstraction</a></li></ul></li><li><a href="#6-services-layer" class="table-of-contents__link toc-highlight">6. Services layer</a><ul><li><a href="#61-displayservice" class="table-of-contents__link toc-highlight">6.1 DisplayService</a></li><li><a href="#62-usbservice" class="table-of-contents__link toc-highlight">6.2 UsbService</a></li><li><a href="#63-usbmonitorservice" class="table-of-contents__link toc-highlight">6.3 UsbMonitorService</a></li><li><a href="#64-automationservice" class="table-of-contents__link toc-highlight">6.4 AutomationService</a></li><li><a href="#65-themeservice" class="table-of-contents__link toc-highlight">6.5 ThemeService</a></li></ul></li><li><a href="#7-ui-layer" class="table-of-contents__link toc-highlight">7. UI layer</a><ul><li><a href="#71-mainwindow" class="table-of-contents__link toc-highlight">7.1 MainWindow</a></li><li><a href="#72-pages" class="table-of-contents__link toc-highlight">7.2 Pages</a></li></ul></li><li><a href="#8-libraries-and-dependencies" class="table-of-contents__link toc-highlight">8. Libraries and dependencies</a></li><li><a href="#9-current-design-constraints-and-extension-points" class="table-of-contents__link toc-highlight">9. Current design constraints and extension points</a></li><li><a href="#10-summary" class="table-of-contents__link toc-highlight">10. Summary</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright 2026 Monitor Switcher contributors.</div></div></div></footer></div>
+</body>
+</html>
