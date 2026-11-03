@@ -6,7 +6,7 @@ sidebar_position: 1
 
 ## Activity events
 
-`ActivityEvent`s are used to store when certain events are triggered. These can be automations being triggered, displays changing, or devices connecting/disconnecting.
+The `ActivityEvent` model is used to store when certain events are triggered. These can be automations being triggered, displays changing, or devices connecting/disconnecting.
 
 For example, if an automation is triggered, that would create a "Automation triggered" event, then if that automation defines multiple actions, each action will create an additional event.
 

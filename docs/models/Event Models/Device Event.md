@@ -10,6 +10,8 @@ Device events represent USB state changes detected by the application. The USB m
 
 The `AutomationService` handles these events and compares their type against automation triggers. A matching connected or disconnected trigger can then execute the automation's actions.
 
+`DeviceEvent` is only used to check when a device connects/disconnects and is not used in the logging - which is handled by `ActivityEvent`.
+
 ## Model definition
 
 ```python

@@ -12,7 +12,6 @@ Monitor Switcher is a Windows desktop application that switches monitor inputs b
 - [Technical implementation](technical-implementation.md)
 - [CLI](cli/index.md)
 - [Hardware](hardware/index.md)
-- [Models](models/index.md)
 - [Services](services/index.md)
 - [UI](ui/index.md)
 

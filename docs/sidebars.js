@@ -24,7 +24,15 @@ const sidebars = {
           type: 'category',
           label: 'Models',
           items: [
-            'models/index',
+            {
+              type: 'category',
+              label: 'Data Models',
+              items: [
+                'models/Data Models/automation',
+                'models/Data Models/usb-device',
+                'models/Data Models/display',
+              ],
+            },
             {
               type: 'category',
               label: 'Event Models',
