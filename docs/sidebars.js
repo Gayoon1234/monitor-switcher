@@ -3,6 +3,7 @@ const sidebars = {
   documentation: [
     'index',
     'technical-implementation',
+    'road-map',
     {
       type: 'category',
       label: 'Application',
@@ -18,7 +19,24 @@ const sidebars = {
         {
           type: 'category',
           label: 'Hardware',
-          items: ['hardware/index'],
+          items: [
+            {
+              type: 'category',
+              label: 'Abstract Classes',
+              items: [
+                'hardware/Abstract Classes/monitor',
+                'hardware/Abstract Classes/usb',
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Implementations',
+              items: [
+                'hardware/Implementations/windows-monitor',
+                'hardware/Implementations/windows-usb',
+              ],
+            },
+          ],
         },
         {
           type: 'category',
