@@ -64,7 +64,16 @@ const sidebars = {
         {
           type: 'category',
           label: 'Services',
-          items: ['services/index'],
+          items: [
+            'services/index',
+            'services/activity-repository',
+            'services/automation-service',
+            'services/config-repository',
+            'services/display-service',
+            'services/theme-service',
+            'services/usb-monitor-service',
+            'services/usb-service',
+          ],
         },
         {
           type: 'category',
