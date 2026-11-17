@@ -1,6 +1,8 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QFrame,
+    QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -13,6 +15,7 @@ class SettingsPage(QWidget):
     theme_changed = Signal(str)
     activity_days_changed = Signal(object)
     clear_activity_requested = Signal()
+    activity_logging_paused_changed = Signal(bool)
 
     ACTIVITY_PERIODS = (
         ("Last 7 days", 7),
@@ -22,16 +25,22 @@ class SettingsPage(QWidget):
         ("All activity", None),
     )
 
-    def __init__(self, theme_service, activity_days: int | None = 30):
+    def __init__(
+        self,
+        theme_service,
+        activity_days: int | None = 30,
+        activity_logging_paused: bool = False,
+    ):
         super().__init__()
         self.theme_service = theme_service
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(16)
         title = QLabel("Settings")
         title.setObjectName("pageTitle")
         title.setStyleSheet("font-size: 24px; font-weight: bold;")
 
-        description = QLabel("Choose an application color theme.")
         self.theme_selector = QComboBox()
         for theme_name in self.theme_service.get_theme_names():
             self.theme_selector.addItem(theme_name.title(), theme_name)
@@ -44,17 +53,11 @@ class SettingsPage(QWidget):
             self._on_theme_selected
         )
 
-        layout.addWidget(title)
-        layout.addWidget(description)
-        layout.addWidget(QLabel("Color theme"))
-        layout.addWidget(self.theme_selector)
-
-        activity_title = QLabel("Activity history")
-        activity_title.setObjectName("sectionTitle")
-        activity_description = QLabel(
-            "Choose how much history to show. Older events remain saved."
-        )
-        activity_description.setWordWrap(True)
+        theme_section, theme_layout = self._create_section("Color theme")
+        theme_row = QHBoxLayout()
+        theme_row.addWidget(QLabel("Application theme"))
+        theme_row.addWidget(self.theme_selector, 1)
+        theme_layout.addLayout(theme_row)
 
         self.activity_period_selector = QComboBox()
         for label, days in self.ACTIVITY_PERIODS:
@@ -67,18 +70,60 @@ class SettingsPage(QWidget):
             self._on_activity_period_selected
         )
 
+        self.activity_logging_button = QPushButton()
+        self.activity_logging_button.setCheckable(True)
+        self.activity_logging_button.setChecked(activity_logging_paused)
+        self._update_activity_logging_button(activity_logging_paused)
+        self.activity_logging_button.toggled.connect(
+            self._on_activity_logging_toggled
+        )
+
         self.clear_activity_button = QPushButton("Delete all activity logs")
         self.clear_activity_button.setObjectName("dangerButton")
         self.clear_activity_button.clicked.connect(
             self._confirm_clear_activity
         )
 
-        layout.addWidget(activity_title)
-        layout.addWidget(activity_description)
-        layout.addWidget(QLabel("Show activity from"))
-        layout.addWidget(self.activity_period_selector)
-        layout.addWidget(self.clear_activity_button)
+        activity_section, activity_layout = self._create_section(
+            "Activity history"
+        )
+        self.activity_filter_row = QHBoxLayout()
+        self.activity_filter_row.addWidget(QLabel("Show activity from:"))
+        self.activity_filter_row.addWidget(
+            self.activity_period_selector,
+            1,
+        )
+        activity_layout.addLayout(self.activity_filter_row)
+
+        self.activity_actions_row = QHBoxLayout()
+        self.activity_actions_row.addWidget(
+            self.activity_logging_button,
+            1,
+        )
+        self.activity_actions_row.addWidget(
+            self.clear_activity_button,
+            1,
+        )
+
+        activity_layout.addLayout(self.activity_actions_row)
+        layout.addWidget(title)
+        layout.addWidget(theme_section)
+        layout.addWidget(activity_section)
         layout.addStretch()
+
+    def _create_section(self, title: str):
+        section = QFrame()
+        section.setObjectName("settingsSectionCard")
+
+        section_layout = QVBoxLayout(section)
+        section_layout.setContentsMargins(18, 16, 18, 16)
+        section_layout.setSpacing(12)
+
+        heading = QLabel(title)
+        heading.setObjectName("sectionTitle")
+        section_layout.addWidget(heading)
+
+        return section, section_layout
 
     def _on_theme_selected(self, index: int) -> None:
         theme_name = self.theme_selector.itemData(index)
@@ -88,6 +133,17 @@ class SettingsPage(QWidget):
     def _on_activity_period_selected(self, index: int) -> None:
         self.activity_days_changed.emit(
             self.activity_period_selector.itemData(index)
+        )
+
+    def _on_activity_logging_toggled(self, paused: bool) -> None:
+        self._update_activity_logging_button(paused)
+        self.activity_logging_paused_changed.emit(paused)
+
+    def _update_activity_logging_button(self, paused: bool) -> None:
+        self.activity_logging_button.setText(
+            "Click to start recording Activity Logs"
+            if paused
+            else "Click to pause Activity Logs"
         )
 
     def _confirm_clear_activity(self) -> None:

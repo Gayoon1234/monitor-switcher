@@ -66,6 +66,7 @@ automation_service = AutomationService(
     display_service=display_service,
     automations=automations,
     activity_repository=activity_repository,
+    store_activity_logs=repository.load_store_activity_logs(),
 )
 
 

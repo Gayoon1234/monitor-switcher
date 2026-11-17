@@ -397,3 +397,65 @@ def test_failed_action_does_not_prevent_later_actions(qapp):
 
     assert repository.events[-2].success is False
     assert repository.events[-1].success is True
+
+
+def test_pausing_activity_logging_keeps_automations_running(qapp):
+    automation = create_automation(
+        actions=[
+            Action(
+                type=ActionType.SWITCH_INPUT,
+                display_id="display-001",
+                input_id="HDMI1",
+            )
+        ]
+    )
+    service, display_service, repository = create_automation_service(
+        [automation]
+    )
+    emitted_events = []
+    service.activity_event.connect(emitted_events.append)
+    service.set_activity_logging_paused(True)
+
+    service.handle_device_event(
+        DeviceEvent(
+            device_id="USB\\TEST_DEVICE",
+            event_type=DeviceEventType.CONNECTED,
+        )
+    )
+
+    assert display_service.calls == [("display-001", "HDMI1")]
+    assert repository.events == []
+    assert emitted_events == []
+
+    service.set_activity_logging_paused(False)
+    service.handle_device_event(
+        DeviceEvent(
+            device_id="USB\\TEST_DEVICE",
+            event_type=DeviceEventType.CONNECTED,
+        )
+    )
+
+    assert [event.event_type for event in repository.events] == [
+        "device_event",
+        "automation_triggered",
+        "action",
+    ]
+
+
+def test_activity_logging_can_start_disabled(qapp):
+    repository = FakeActivityRepository()
+    service = AutomationService(
+        display_service=FakeDisplayService(),
+        activity_repository=repository,
+        automations=[],
+        store_activity_logs=False,
+    )
+
+    service.handle_device_event(
+        DeviceEvent(
+            device_id="USB\\TEST_DEVICE",
+            event_type=DeviceEventType.CONNECTED,
+        )
+    )
+
+    assert repository.events == []

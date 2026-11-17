@@ -86,5 +86,9 @@
                 }
             ]
         }
-    ]
+    ],
+    "settings": {
+        "activity_days": 7,
+        "store_activity_logs": true
+    }
 }

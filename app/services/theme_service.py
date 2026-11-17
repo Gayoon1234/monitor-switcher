@@ -188,7 +188,8 @@ class ThemeService:
                 background-color: {colors["background"]};
             }}
             QFrame#displayCard, QFrame#activityItem,
-            QFrame#automationCard, QWidget#actionEditorCard {{
+            QFrame#automationCard, QFrame#settingsSectionCard,
+            QWidget#actionEditorCard {{
                 background-color: {colors["surface"]};
                 border: 1px solid {colors["border"]};
                 border-radius: 10px;
@@ -281,8 +282,15 @@ class ThemeService:
                 background-color: {colors["surface_alt"]};
                 font-weight: 600;
             }}
+            QPushButton#dangerButton {{
+                background-color: #b42318;
+                color: #ffffff;
+                border-color: #b42318;
+                font-weight: 600;
+            }}
             QPushButton#dangerButton:hover {{
-                border-color: {colors["unconfigured_border"]};
+                background-color: #912018;
+                border-color: #912018;
             }}
             QLineEdit::placeholder {{
                 color: {colors["muted_text"]};

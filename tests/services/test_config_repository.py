@@ -259,3 +259,59 @@ def test_save_displays(tmp_path):
         }
         for display in displays
     ]
+
+
+def test_activity_days_default_to_30_and_persist_selection(tmp_path):
+    config_path = tmp_path / "config.json"
+    repository = ConfigRepository(path=config_path)
+
+    assert repository.load_activity_days() == 30
+
+    repository.save_activity_days(7)
+    reloaded_repository = ConfigRepository(path=config_path)
+
+    assert reloaded_repository.load_activity_days() == 7
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    assert data["settings"] == {
+        "activity_days": 7,
+        "store_activity_logs": True,
+    }
+    assert "activity_days" not in data
+
+
+def test_activity_days_can_persist_all_activity(tmp_path):
+    config_path = tmp_path / "config.json"
+    repository = ConfigRepository(path=config_path)
+
+    repository.save_activity_days(None)
+
+    assert ConfigRepository(path=config_path).load_activity_days() is None
+
+
+def test_legacy_activity_days_are_migrated_into_settings(tmp_path):
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        json.dumps({"activity_days": 7, "other_setting": "keep"}),
+        encoding="utf-8",
+    )
+    repository = ConfigRepository(path=config_path)
+
+    assert repository.load_activity_days() == 7
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    assert data == {
+        "other_setting": "keep",
+        "settings": {
+            "activity_days": 7,
+            "store_activity_logs": True,
+        },
+    }
+
+
+def test_store_activity_logs_default_and_persist(tmp_path):
+    config_path = tmp_path / "config.json"
+    repository = ConfigRepository(path=config_path)
+
+    assert repository.load_store_activity_logs() is True
+    repository.save_store_activity_logs(False)
+
+    assert ConfigRepository(path=config_path).load_store_activity_logs() is False
