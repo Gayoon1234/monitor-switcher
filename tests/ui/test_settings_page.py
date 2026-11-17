@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 
+from PySide6.QtWidgets import QLabel
+
 from app.services.config_repository import ConfigRepository
 from app.services.theme_service import ThemeService
 from app.ui.main_window import MainWindow
@@ -17,6 +19,21 @@ def test_theme_selection_emits_selected_theme(tmp_path, qapp):
     )
 
     assert selected_themes == ["harlequin"]
+
+
+def test_color_theme_section_uses_activity_history_heading_style(
+    tmp_path,
+    qapp,
+):
+    service = ThemeService(str(tmp_path / "theme.json"))
+    page = SettingsPage(service)
+    labels = {
+        label.text(): label
+        for label in page.findChildren(QLabel)
+    }
+
+    assert labels["Color theme"].objectName() == "sectionTitle"
+    assert labels["Choose an application color theme."].wordWrap()
 
 
 def test_activity_period_selection_emits_retention_days(tmp_path, qapp):

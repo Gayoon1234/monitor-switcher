@@ -37,7 +37,10 @@ class SettingsPage(QWidget):
         title.setObjectName("pageTitle")
         title.setStyleSheet("font-size: 24px; font-weight: bold;")
 
-        description = QLabel("Choose an application color theme.")
+        theme_title = QLabel("Color theme")
+        theme_title.setObjectName("sectionTitle")
+        theme_description = QLabel("Choose an application color theme.")
+        theme_description.setWordWrap(True)
         self.theme_selector = QComboBox()
         for theme_name in self.theme_service.get_theme_names():
             self.theme_selector.addItem(theme_name.title(), theme_name)
@@ -51,8 +54,9 @@ class SettingsPage(QWidget):
         )
 
         layout.addWidget(title)
-        layout.addWidget(description)
-        layout.addWidget(QLabel("Color theme"))
+        layout.addWidget(theme_title)
+        layout.addWidget(theme_description)
+        layout.addWidget(QLabel("Application theme"))
         layout.addWidget(self.theme_selector)
 
         activity_title = QLabel("Activity history")
