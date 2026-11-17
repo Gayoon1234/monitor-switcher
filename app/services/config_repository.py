@@ -168,10 +168,45 @@ class ConfigRepository:
         ]
         self._save(data)
 
+    def _load_settings(self) -> dict:
+        data = self._load()
+        settings = data.get("settings", {})
+        if not isinstance(settings, dict):
+            raise ValueError("Application settings must be a JSON object.")
+
+        normalized_settings = dict(settings)
+        normalized_settings.setdefault(
+            "activity_days",
+            data.get("activity_days", 30),
+        )
+        normalized_settings.setdefault("store_activity_logs", True)
+
+        if (
+            data.get("settings") != normalized_settings
+            or "activity_days" in data
+        ):
+            data["settings"] = normalized_settings
+            data.pop("activity_days", None)
+            self._save(data)
+
+        return normalized_settings
+
     def load_activity_days(self) -> int | None:
-        return self._load().get("activity_days", 30)
+        return self._load_settings()["activity_days"]
 
     def save_activity_days(self, days: int | None) -> None:
         data = self._load()
-        data["activity_days"] = days
+        settings = self._load_settings()
+        settings["activity_days"] = days
+        data["settings"] = settings
+        self._save(data)
+
+    def load_store_activity_logs(self) -> bool:
+        return self._load_settings()["store_activity_logs"]
+
+    def save_store_activity_logs(self, enabled: bool) -> None:
+        data = self._load()
+        settings = self._load_settings()
+        settings["store_activity_logs"] = enabled
+        data["settings"] = settings
         self._save(data)

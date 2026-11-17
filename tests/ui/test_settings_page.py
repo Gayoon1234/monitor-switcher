@@ -49,3 +49,40 @@ def test_selected_activity_period_is_saved(tmp_path):
 
     assert repository.load_activity_days() == 7
     assert activity_page.days == 7
+
+
+def test_activity_logging_button_toggles_pause_state(tmp_path, qapp):
+    service = ThemeService(str(tmp_path / "theme.json"))
+    page = SettingsPage(service)
+    paused_states = []
+    page.activity_logging_paused_changed.connect(paused_states.append)
+
+    assert page.pause_activity_button.text() == "Pause activity logs"
+
+    page.pause_activity_button.click()
+    assert page.pause_activity_button.text() == "Resume activity logs"
+
+    page.pause_activity_button.click()
+    assert page.pause_activity_button.text() == "Pause activity logs"
+    assert paused_states == [True, False]
+
+
+def test_activity_logging_pause_is_persisted(tmp_path):
+    repository = ConfigRepository(path=tmp_path / "config.json")
+    activity_service = SimpleNamespace(
+        activity_logging_paused=False,
+        set_activity_logging_paused=lambda paused: setattr(
+            activity_service,
+            "activity_logging_paused",
+            paused,
+        ),
+    )
+    window = SimpleNamespace(
+        repository=repository,
+        automation_service=activity_service,
+    )
+
+    MainWindow._set_activity_logging_paused(window, True)
+
+    assert activity_service.activity_logging_paused is True
+    assert repository.load_store_activity_logs() is False

@@ -94,6 +94,9 @@ class MainWindow(QMainWindow):
             self.settings_page = SettingsPage(
                 self.theme_service,
                 activity_days=activity_days,
+                activity_logging_paused=(
+                    self.automation_service.activity_logging_paused
+                ),
             )
             self.settings_page.theme_changed.connect(
                 self._set_active_theme
@@ -103,6 +106,9 @@ class MainWindow(QMainWindow):
             )
             self.settings_page.clear_activity_requested.connect(
                 self._clear_activity_history
+            )
+            self.settings_page.activity_logging_paused_changed.connect(
+                self._set_activity_logging_paused
             )
             self.pages.addWidget(self.settings_page)
         else:
@@ -137,6 +143,10 @@ class MainWindow(QMainWindow):
         self.activity_page.set_events(
             self.automation_service.get_activity_history(days)
         )
+
+    def _set_activity_logging_paused(self, paused):
+        self.repository.save_store_activity_logs(not paused)
+        self.automation_service.set_activity_logging_paused(paused)
 
     def _clear_activity_history(self):
         self.automation_service.clear_activity_history()

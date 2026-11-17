@@ -56,5 +56,6 @@ def create_context(*, with_hardware: bool = False) -> ServiceContext:
         display_service=display_service,
         automations=repository.load_automations(),
         activity_repository=activity_repository,
+        store_activity_logs=repository.load_store_activity_logs(),
     )
     return context

@@ -22,12 +22,14 @@ class AutomationService(QObject):
         display_service: DisplayService,
         activity_repository: ActivityRepository,
         automations: list[Automation],
+        store_activity_logs: bool = True,
     ):
         super().__init__()
 
         self.display_service = display_service
         self.activity_repository = activity_repository
         self.automations = automations
+        self.activity_logging_paused = not store_activity_logs
 
     def handle_device_event(self, event: DeviceEvent) -> None:
         self._emit_activity(
@@ -130,8 +132,14 @@ class AutomationService(QObject):
                     )
 
     def _emit_activity(self, event: ActivityEvent) -> None:
+        if self.activity_logging_paused:
+            return
+
         self.activity_repository.append(event)
         self.activity_event.emit(event)
+
+    def set_activity_logging_paused(self, paused: bool) -> None:
+        self.activity_logging_paused = paused
 
     def get_activity_history(
         self,

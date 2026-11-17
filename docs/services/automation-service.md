@@ -15,6 +15,10 @@ AutomationService(display_service, activity_repository, automations)
 
 The service is a Qt `QObject` and exposes the `activity_event` signal. The
 signal emits each `ActivityEvent` after it has been appended to the repository.
+Activity logging is enabled by default. Its setting is restored from
+`config.json`. While paused, events are neither saved to the repository nor
+emitted, but device events continue to be handled and matching automations
+still run.
 
 ## Event handling
 
@@ -35,6 +39,7 @@ and recorded as a failed `action` event; remaining actions continue.
 
 - `get_activity_history(days=30)` delegates to `ActivityRepository.load`.
 - `clear_activity_history()` clears the repository.
+- `set_activity_logging_paused(paused)` pauses or resumes activity recording.
 
 Automations are passed in at construction and held as a list; this service does
 not load or save them itself.

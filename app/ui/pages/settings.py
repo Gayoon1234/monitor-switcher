@@ -13,6 +13,7 @@ class SettingsPage(QWidget):
     theme_changed = Signal(str)
     activity_days_changed = Signal(object)
     clear_activity_requested = Signal()
+    activity_logging_paused_changed = Signal(bool)
 
     ACTIVITY_PERIODS = (
         ("Last 7 days", 7),
@@ -22,7 +23,12 @@ class SettingsPage(QWidget):
         ("All activity", None),
     )
 
-    def __init__(self, theme_service, activity_days: int | None = 30):
+    def __init__(
+        self,
+        theme_service,
+        activity_days: int | None = 30,
+        activity_logging_paused: bool = False,
+    ):
         super().__init__()
         self.theme_service = theme_service
 
@@ -52,7 +58,8 @@ class SettingsPage(QWidget):
         activity_title = QLabel("Activity history")
         activity_title.setObjectName("sectionTitle")
         activity_description = QLabel(
-            "Choose how much history to show. Older events remain saved."
+            "Choose how much history to show. Older events remain saved. "
+            "Pausing logs does not stop monitoring or automations."
         )
         activity_description.setWordWrap(True)
 
@@ -67,6 +74,14 @@ class SettingsPage(QWidget):
             self._on_activity_period_selected
         )
 
+        self.pause_activity_button = QPushButton()
+        self.pause_activity_button.setCheckable(True)
+        self.pause_activity_button.setChecked(activity_logging_paused)
+        self._update_pause_activity_button(activity_logging_paused)
+        self.pause_activity_button.toggled.connect(
+            self._on_activity_logging_toggled
+        )
+
         self.clear_activity_button = QPushButton("Delete all activity logs")
         self.clear_activity_button.setObjectName("dangerButton")
         self.clear_activity_button.clicked.connect(
@@ -77,6 +92,7 @@ class SettingsPage(QWidget):
         layout.addWidget(activity_description)
         layout.addWidget(QLabel("Show activity from"))
         layout.addWidget(self.activity_period_selector)
+        layout.addWidget(self.pause_activity_button)
         layout.addWidget(self.clear_activity_button)
         layout.addStretch()
 
@@ -88,6 +104,15 @@ class SettingsPage(QWidget):
     def _on_activity_period_selected(self, index: int) -> None:
         self.activity_days_changed.emit(
             self.activity_period_selector.itemData(index)
+        )
+
+    def _on_activity_logging_toggled(self, paused: bool) -> None:
+        self._update_pause_activity_button(paused)
+        self.activity_logging_paused_changed.emit(paused)
+
+    def _update_pause_activity_button(self, paused: bool) -> None:
+        self.pause_activity_button.setText(
+            "Resume activity logs" if paused else "Pause activity logs"
         )
 
     def _confirm_clear_activity(self) -> None:
