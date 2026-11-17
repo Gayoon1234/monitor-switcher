@@ -1,6 +1,7 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QHBoxLayout,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -39,8 +40,6 @@ class SettingsPage(QWidget):
 
         theme_title = QLabel("Color theme")
         theme_title.setObjectName("sectionTitle")
-        theme_description = QLabel("Choose an application color theme.")
-        theme_description.setWordWrap(True)
         self.theme_selector = QComboBox()
         for theme_name in self.theme_service.get_theme_names():
             self.theme_selector.addItem(theme_name.title(), theme_name)
@@ -55,17 +54,11 @@ class SettingsPage(QWidget):
 
         layout.addWidget(title)
         layout.addWidget(theme_title)
-        layout.addWidget(theme_description)
         layout.addWidget(QLabel("Application theme"))
         layout.addWidget(self.theme_selector)
 
         activity_title = QLabel("Activity history")
         activity_title.setObjectName("sectionTitle")
-        activity_description = QLabel(
-            "Choose how much history to show. Older events remain saved. "
-            "Pausing logs does not stop monitoring or automations."
-        )
-        activity_description.setWordWrap(True)
 
         self.activity_period_selector = QComboBox()
         for label, days in self.ACTIVITY_PERIODS:
@@ -78,11 +71,11 @@ class SettingsPage(QWidget):
             self._on_activity_period_selected
         )
 
-        self.pause_activity_button = QPushButton()
-        self.pause_activity_button.setCheckable(True)
-        self.pause_activity_button.setChecked(activity_logging_paused)
-        self._update_pause_activity_button(activity_logging_paused)
-        self.pause_activity_button.toggled.connect(
+        self.activity_logging_button = QPushButton()
+        self.activity_logging_button.setCheckable(True)
+        self.activity_logging_button.setChecked(activity_logging_paused)
+        self._update_activity_logging_button(activity_logging_paused)
+        self.activity_logging_button.toggled.connect(
             self._on_activity_logging_toggled
         )
 
@@ -93,11 +86,25 @@ class SettingsPage(QWidget):
         )
 
         layout.addWidget(activity_title)
-        layout.addWidget(activity_description)
-        layout.addWidget(QLabel("Show activity from"))
-        layout.addWidget(self.activity_period_selector)
-        layout.addWidget(self.pause_activity_button)
-        layout.addWidget(self.clear_activity_button)
+
+        self.activity_filter_row = QHBoxLayout()
+        self.activity_filter_row.addWidget(QLabel("Show activity from:"))
+        self.activity_filter_row.addWidget(
+            self.activity_period_selector,
+            1,
+        )
+        layout.addLayout(self.activity_filter_row)
+
+        self.activity_actions_row = QHBoxLayout()
+        self.activity_actions_row.addWidget(
+            self.activity_logging_button,
+            1,
+        )
+        self.activity_actions_row.addWidget(
+            self.clear_activity_button,
+            1,
+        )
+        layout.addLayout(self.activity_actions_row)
         layout.addStretch()
 
     def _on_theme_selected(self, index: int) -> None:
@@ -111,12 +118,14 @@ class SettingsPage(QWidget):
         )
 
     def _on_activity_logging_toggled(self, paused: bool) -> None:
-        self._update_pause_activity_button(paused)
+        self._update_activity_logging_button(paused)
         self.activity_logging_paused_changed.emit(paused)
 
-    def _update_pause_activity_button(self, paused: bool) -> None:
-        self.pause_activity_button.setText(
-            "Resume activity logs" if paused else "Pause activity logs"
+    def _update_activity_logging_button(self, paused: bool) -> None:
+        self.activity_logging_button.setText(
+            "Click to start recording Activity Logs"
+            if paused
+            else "Click to pause Activity Logs"
         )
 
     def _confirm_clear_activity(self) -> None:

@@ -33,7 +33,7 @@ def test_color_theme_section_uses_activity_history_heading_style(
     }
 
     assert labels["Color theme"].objectName() == "sectionTitle"
-    assert labels["Choose an application color theme."].wordWrap()
+    assert "Choose an application color theme." not in labels
 
 
 def test_activity_period_selection_emits_retention_days(tmp_path, qapp):
@@ -74,14 +74,44 @@ def test_activity_logging_button_toggles_pause_state(tmp_path, qapp):
     paused_states = []
     page.activity_logging_paused_changed.connect(paused_states.append)
 
-    assert page.pause_activity_button.text() == "Pause activity logs"
+    assert page.activity_logging_button.text() == (
+        "Click to pause Activity Logs"
+    )
 
-    page.pause_activity_button.click()
-    assert page.pause_activity_button.text() == "Resume activity logs"
+    page.activity_logging_button.click()
+    assert page.activity_logging_button.text() == (
+        "Click to start recording Activity Logs"
+    )
 
-    page.pause_activity_button.click()
-    assert page.pause_activity_button.text() == "Pause activity logs"
+    page.activity_logging_button.click()
+    assert page.activity_logging_button.text() == (
+        "Click to pause Activity Logs"
+    )
     assert paused_states == [True, False]
+
+
+def test_delete_activity_button_uses_danger_style(tmp_path, qapp):
+    service = ThemeService(str(tmp_path / "theme.json"))
+    page = SettingsPage(service)
+    stylesheet = service.get_stylesheet()
+
+    assert page.clear_activity_button.objectName() == "dangerButton"
+    assert "background-color: #b42318" in stylesheet
+
+
+def test_activity_controls_expand_across_two_rows(tmp_path, qapp):
+    service = ThemeService(str(tmp_path / "theme.json"))
+    page = SettingsPage(service)
+    labels = [
+        label.text()
+        for label in page.findChildren(QLabel)
+    ]
+
+    assert "Show activity from:" in labels
+    assert page.activity_filter_row.stretch(1) == 1
+    assert page.activity_actions_row.stretch(1) == 1
+    assert page.activity_actions_row.stretch(0) == 1
+    assert "Choose how much history to show." not in labels
 
 
 def test_activity_logging_pause_is_persisted(tmp_path):
