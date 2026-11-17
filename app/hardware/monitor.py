@@ -6,6 +6,10 @@ from app.models.display import Display
 class MonitorController(ABC):
 
     @abstractmethod
+    def set_displays(self, displays: list[Display]) -> None:
+        pass
+
+    @abstractmethod
     def switch_input(self, display_id: str, input_id: str) -> None:
         pass
 

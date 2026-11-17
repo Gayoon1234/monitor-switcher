@@ -1,4 +1,8 @@
-# Technical implementation
+---
+id: technical-implementation
+title: Technical implementation
+sidebar_position: 1
+---
 
 This document describes the architecture of Monitor Switcher, including the main data models, hardware integration, persistence layer, event flow, and UI structure.
 
