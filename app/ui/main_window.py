@@ -78,8 +78,12 @@ class MainWindow(QMainWindow):
             )
         )
         
+        activity_days = self.repository.load_activity_days()
         self.activity_page = ActivityPage(
-            activity_history=self.automation_service.get_activity_history()
+            activity_history=self.automation_service.get_activity_history(
+                activity_days
+            ),
+            days=activity_days,
         )
 
         self.pages.addWidget(
@@ -87,7 +91,10 @@ class MainWindow(QMainWindow):
         )
 
         if self.theme_service is not None:
-            self.settings_page = SettingsPage(self.theme_service)
+            self.settings_page = SettingsPage(
+                self.theme_service,
+                activity_days=activity_days,
+            )
             self.settings_page.theme_changed.connect(
                 self._set_active_theme
             )
@@ -125,6 +132,7 @@ class MainWindow(QMainWindow):
             )
 
     def _set_activity_period(self, days):
+        self.repository.save_activity_days(days)
         self.activity_page.days = days
         self.activity_page.set_events(
             self.automation_service.get_activity_history(days)

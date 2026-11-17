@@ -167,3 +167,11 @@ class ConfigRepository:
             for display in displays
         ]
         self._save(data)
+
+    def load_activity_days(self) -> int | None:
+        return self._load().get("activity_days", 30)
+
+    def save_activity_days(self, days: int | None) -> None:
+        data = self._load()
+        data["activity_days"] = days
+        self._save(data)

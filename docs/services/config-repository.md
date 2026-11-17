@@ -3,8 +3,8 @@ title: ConfigRepository
 ---
 
 `ConfigRepository` reads and writes the application's `config.json` file. It
-serializes the configured USB devices, automations, and displays used by the
-services.
+serializes the configured USB devices, automations, displays, and activity
+history period used by the application.
 
 ## Construction
 
@@ -37,6 +37,12 @@ the complete configuration back to the file, preserving other properties.
   `displays`, including each input's `InputType`.
 - `save_displays(displays)` writes display identifiers and names, Windows
   device IDs, and input identifiers and types.
+
+### Activity history
+
+- `load_activity_days()` returns the saved history period in days, or `30` if
+  no period has been saved. `None` represents all activity.
+- `save_activity_days(days)` persists the selected history period.
 
 If the file is absent or cannot be read as JSON, loading begins with an empty
 configuration. The repository does not validate the full configuration schema

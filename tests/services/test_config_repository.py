@@ -259,3 +259,24 @@ def test_save_displays(tmp_path):
         }
         for display in displays
     ]
+
+
+def test_activity_days_default_to_30_and_persist_selection(tmp_path):
+    config_path = tmp_path / "config.json"
+    repository = ConfigRepository(path=config_path)
+
+    assert repository.load_activity_days() == 30
+
+    repository.save_activity_days(7)
+    reloaded_repository = ConfigRepository(path=config_path)
+
+    assert reloaded_repository.load_activity_days() == 7
+
+
+def test_activity_days_can_persist_all_activity(tmp_path):
+    config_path = tmp_path / "config.json"
+    repository = ConfigRepository(path=config_path)
+
+    repository.save_activity_days(None)
+
+    assert ConfigRepository(path=config_path).load_activity_days() is None
