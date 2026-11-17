@@ -188,7 +188,8 @@ class ThemeService:
                 background-color: {colors["background"]};
             }}
             QFrame#displayCard, QFrame#activityItem,
-            QFrame#automationCard, QWidget#actionEditorCard {{
+            QFrame#automationCard, QFrame#settingsSectionCard,
+            QWidget#actionEditorCard {{
                 background-color: {colors["surface"]};
                 border: 1px solid {colors["border"]};
                 border-radius: 10px;

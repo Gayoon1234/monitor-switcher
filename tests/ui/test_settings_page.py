@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QFrame, QLabel
 
 from app.services.config_repository import ConfigRepository
 from app.services.theme_service import ThemeService
@@ -34,6 +34,16 @@ def test_color_theme_section_uses_activity_history_heading_style(
 
     assert labels["Color theme"].objectName() == "sectionTitle"
     assert "Choose an application color theme." not in labels
+
+
+def test_settings_sections_use_theme_cards(tmp_path, qapp):
+    service = ThemeService(str(tmp_path / "theme.json"))
+    page = SettingsPage(service)
+
+    sections = page.findChildren(QFrame, "settingsSectionCard")
+
+    assert len(sections) == 2
+    assert "QFrame#settingsSectionCard" in service.get_stylesheet()
 
 
 def test_activity_period_selection_emits_retention_days(tmp_path, qapp):
@@ -112,6 +122,15 @@ def test_activity_controls_expand_across_two_rows(tmp_path, qapp):
     assert page.activity_actions_row.stretch(1) == 1
     assert page.activity_actions_row.stretch(0) == 1
     assert "Choose how much history to show." not in labels
+
+
+def test_settings_page_has_consistent_margins_and_spacing(tmp_path, qapp):
+    service = ThemeService(str(tmp_path / "theme.json"))
+    page = SettingsPage(service)
+
+    assert page.layout().spacing() == 16
+    assert page.layout().contentsMargins().left() == 24
+    assert page.layout().contentsMargins().top() == 20
 
 
 def test_activity_logging_pause_is_persisted(tmp_path):

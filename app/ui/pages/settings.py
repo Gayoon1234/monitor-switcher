@@ -1,6 +1,7 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QMessageBox,
@@ -34,12 +35,12 @@ class SettingsPage(QWidget):
         self.theme_service = theme_service
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setSpacing(16)
         title = QLabel("Settings")
         title.setObjectName("pageTitle")
         title.setStyleSheet("font-size: 24px; font-weight: bold;")
 
-        theme_title = QLabel("Color theme")
-        theme_title.setObjectName("sectionTitle")
         self.theme_selector = QComboBox()
         for theme_name in self.theme_service.get_theme_names():
             self.theme_selector.addItem(theme_name.title(), theme_name)
@@ -52,13 +53,11 @@ class SettingsPage(QWidget):
             self._on_theme_selected
         )
 
-        layout.addWidget(title)
-        layout.addWidget(theme_title)
-        layout.addWidget(QLabel("Application theme"))
-        layout.addWidget(self.theme_selector)
-
-        activity_title = QLabel("Activity history")
-        activity_title.setObjectName("sectionTitle")
+        theme_section, theme_layout = self._create_section("Color theme")
+        theme_row = QHBoxLayout()
+        theme_row.addWidget(QLabel("Application theme"))
+        theme_row.addWidget(self.theme_selector, 1)
+        theme_layout.addLayout(theme_row)
 
         self.activity_period_selector = QComboBox()
         for label, days in self.ACTIVITY_PERIODS:
@@ -85,15 +84,16 @@ class SettingsPage(QWidget):
             self._confirm_clear_activity
         )
 
-        layout.addWidget(activity_title)
-
+        activity_section, activity_layout = self._create_section(
+            "Activity history"
+        )
         self.activity_filter_row = QHBoxLayout()
         self.activity_filter_row.addWidget(QLabel("Show activity from:"))
         self.activity_filter_row.addWidget(
             self.activity_period_selector,
             1,
         )
-        layout.addLayout(self.activity_filter_row)
+        activity_layout.addLayout(self.activity_filter_row)
 
         self.activity_actions_row = QHBoxLayout()
         self.activity_actions_row.addWidget(
@@ -104,8 +104,26 @@ class SettingsPage(QWidget):
             self.clear_activity_button,
             1,
         )
-        layout.addLayout(self.activity_actions_row)
+
+        activity_layout.addLayout(self.activity_actions_row)
+        layout.addWidget(title)
+        layout.addWidget(theme_section)
+        layout.addWidget(activity_section)
         layout.addStretch()
+
+    def _create_section(self, title: str):
+        section = QFrame()
+        section.setObjectName("settingsSectionCard")
+
+        section_layout = QVBoxLayout(section)
+        section_layout.setContentsMargins(18, 16, 18, 16)
+        section_layout.setSpacing(12)
+
+        heading = QLabel(title)
+        heading.setObjectName("sectionTitle")
+        section_layout.addWidget(heading)
+
+        return section, section_layout
 
     def _on_theme_selected(self, index: int) -> None:
         theme_name = self.theme_selector.itemData(index)
