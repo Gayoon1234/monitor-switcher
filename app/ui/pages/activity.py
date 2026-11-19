@@ -3,6 +3,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -72,18 +73,21 @@ class ActivityItem(QFrame):
 
 
 class ActivityPage(QWidget):
+    PAGE_SIZE = 25
+
     def __init__(self, activity_history=None, days: int | None = 30):
         super().__init__()
         self.total_events = 0
         self.successful_events = 0
         self.failed_events = 0
         self.days = days
+        self._events = []
+        self._current_page = 0
 
         self._setup_ui()
 
         if activity_history:
-            for event in activity_history:
-                self.add_event(event)
+            self.set_events(activity_history)
 
     def _setup_ui(self):
         self.layout = QVBoxLayout(self)
@@ -128,40 +132,89 @@ class ActivityPage(QWidget):
         self.activity_container.addWidget(self.empty_state)
         self.layout.addWidget(scroll_area)
 
+        pagination = QHBoxLayout()
+        self.previous_page_button = QPushButton("Previous")
+        self.previous_page_button.clicked.connect(self._show_previous_page)
+        self.page_label = QLabel("No pages")
+        self.page_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.next_page_button = QPushButton("Next")
+        self.next_page_button.clicked.connect(self._show_next_page)
+        pagination.addStretch()
+        pagination.addWidget(self.previous_page_button)
+        pagination.addWidget(self.page_label)
+        pagination.addWidget(self.next_page_button)
+        pagination.addStretch()
+        self.layout.addLayout(pagination)
+        self._update_pagination_controls()
+
     def add_event(self, event):
-        if self.total_events == 0:
-            self.activity_container.removeWidget(self.empty_state)
-            self.empty_state.hide()
-
-        item = ActivityItem(event)
-        self.activity_container.insertWidget(0, item)
-
+        self._events.insert(0, event)
         self.total_events += 1
         if event.success:
             self.successful_events += 1
         else:
             self.failed_events += 1
-        self._update_summary()
+
+        if self._current_page == 0:
+            self._render_page()
+        else:
+            self._update_summary()
+            self._update_pagination_controls()
 
     def set_events(self, events) -> None:
+        self._events = list(reversed(list(events or [])))
+        self._current_page = 0
+        self.total_events = len(self._events)
+        self.successful_events = sum(
+            event.success for event in self._events
+        )
+        self.failed_events = self.total_events - self.successful_events
+        self._render_page()
+
+    def _render_page(self) -> None:
         while self.activity_container.count():
             item = self.activity_container.takeAt(0)
             widget = item.widget()
-            if widget is not None:
+            if widget is not None and widget is not self.empty_state:
                 widget.setParent(None)
                 widget.deleteLater()
 
-        self.total_events = 0
-        self.successful_events = 0
-        self.failed_events = 0
-        if not events:
+        if not self._events:
             self.empty_state.show()
             self.activity_container.addWidget(self.empty_state)
             self.summary.setText("No events yet")
-            return
+        else:
+            self.empty_state.hide()
+            start = self._current_page * self.PAGE_SIZE
+            for event in self._events[start:start + self.PAGE_SIZE]:
+                self.activity_container.addWidget(ActivityItem(event))
+            self._update_summary()
 
-        for event in events:
-            self.add_event(event)
+        self._update_pagination_controls()
+
+    def _show_previous_page(self) -> None:
+        if self._current_page > 0:
+            self._current_page -= 1
+            self._render_page()
+
+    def _show_next_page(self) -> None:
+        if (self._current_page + 1) * self.PAGE_SIZE < self.total_events:
+            self._current_page += 1
+            self._render_page()
+
+    def _update_pagination_controls(self) -> None:
+        page_count = (
+            self.total_events + self.PAGE_SIZE - 1
+        ) // self.PAGE_SIZE
+        self.page_label.setText(
+            f"Page {self._current_page + 1} of {page_count}"
+            if page_count
+            else "No pages"
+        )
+        self.previous_page_button.setEnabled(self._current_page > 0)
+        self.next_page_button.setEnabled(
+            self._current_page + 1 < page_count
+        )
 
     def _update_summary(self):
         self.summary.setText(
