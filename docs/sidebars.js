@@ -10,14 +10,6 @@ const sidebars = {
       items: [
         {
           type: 'category',
-          label: 'CLI',
-          items: [
-            'cli/index',
-            'cli/commands/index',
-          ],
-        },
-        {
-          type: 'category',
           label: 'Hardware',
           items: [
             {

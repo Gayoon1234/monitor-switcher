@@ -17,6 +17,6 @@ implementations.
 | [UsbMonitorService](./usb-monitor-service) | Poll for USB connection changes and emit device events. |
 | [UsbService](./usb-service) | Read connected and configured USB devices and manage saved devices. |
 
-These services are generally composed by the application or CLI startup code.
+These services are generally composed by the application startup code.
 Hardware-dependent services receive their hardware interfaces as constructor
 arguments, which also makes them testable with fakes.

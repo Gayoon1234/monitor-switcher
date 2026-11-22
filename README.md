@@ -63,39 +63,6 @@ python main.py
 
 This launches the PySide6 desktop application.
 
-### Command-line interface
-
-The same device, display, automation, activity, and settings workflows are
-available from the CLI:
-
-```powershell
-python -m app.cli --help
-python -m app.cli find-my-device list
-python -m app.cli my-devices list
-python -m app.cli my-devices displays list
-python -m app.cli my-devices displays switch display-001 HDMI2
-python -m app.cli automations list
-python -m app.cli activity list --days 30
-```
-
-To detect and save a newly connected device:
-
-```powershell
-python -m app.cli find-my-device detect --timeout 60 --nickname "Laptop Dock"
-```
-
-Create an automation using the saved device and display IDs:
-
-```powershell
-python -m app.cli automations add "Dock connected" `
-  --when connected --device "<saved-device-id>" `
-  --display display-001 --input HDMI2
-python -m app.cli automations watch
-```
-
-Run `python -m app.cli <command> --help` for the available options. Both
-interfaces use the same `config.json`, `theme.json`, and `activity.db` files.
-
 ## Typical usage workflow
 
 ### 1. Start the app
