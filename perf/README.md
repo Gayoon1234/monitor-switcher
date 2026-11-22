@@ -18,11 +18,21 @@ time, and the most expensive Python calls in one render. The database is copied
 using SQLite's read-only backup API before it is opened by the repository.
 
 `measure_ui_responsiveness.py` opens a test window populated with synthetic
-events or devices. Scroll during the measurement interval; it reports event-loop
-timer lateness (median, p95, and maximum), widget construction time, and
-initial layout/paint processing time. Timer lateness indicates UI-thread
-responsiveness, not exact frame rate. Synthetic device counts should be kept
-realistic when comparing against normal use.
+events or devices and automatically sends wheel events to its scrollable
+areas. It reports widget construction time, initial paint/snapshot processing
+time, wheel-to-processed-snapshot latency (median, p95, and maximum), and
+16 ms event-loop timer lateness including missed timer intervals. Results can
+be emitted as JSON for repeatable comparison:
+
+```powershell
+python perf\measure_ui_responsiveness.py --page find-my-device --items 50 --scroll-events 200 --json
+```
+
+The script captures a QWidget snapshot after each wheel event. These timings
+measure Qt event handling and widget rendering in-process, not physical display
+frame presentation or monitor refresh. Use the same page, item count, event
+count, and interval when comparing runs; compare multiple-run medians. Synthetic
+device counts should be kept realistic when comparing against normal use.
 
 For useful comparisons, run each scenario several times on the same machine and
 compare medians. A high render/setup time points toward Python-side widget

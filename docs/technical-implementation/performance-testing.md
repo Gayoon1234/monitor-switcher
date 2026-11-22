@@ -1,98 +1,113 @@
 ---
 id: performance-testing
-title: Performance Testing
+title: Performance Testing (UI)
 sidebar_position: 2
 ---
 
-This page documents the lightweight performance probes in the repository's
-`perf/` directory and the first recorded UI baseline.
+## Hypothesis
 
-## What the probes measure
+Scrolling lag may be caused by UI work increasing with the number of visible
+widgets. Activity pagination should keep rendered event cards bounded; device
+pages create one card per item.
 
-Run the commands from the repository root in an environment where the project
-dependencies, including PySide6, are installed. In PowerShell, `py` can be used
-instead of `python` if it selects the Python environment with those dependencies.
+## Data/Results
 
-### Activity history and rendering
+Measurements were collected on 22 November 2026 using synthetic UI data and the
+local activity database.
 
-```powershell
-py perf\profile_activity.py --database activity.db --days 30
-py perf\profile_activity.py --synthetic-events 5000 --days all
-```
+`profile_activity.py` copies the activity database to a temporary snapshot,
+times history loading/decoding, then measures repeated `set_events()` rendering.
+The source database is read-only. Activity displays 25 event cards per page.
 
-`profile_activity.py` reports:
+`measure_ui_responsiveness.py` creates the page from synthetic data, then
+automatically sends wheel events to its scrollable areas. Widget construction
+is timed with `perf_counter`; synthetic data generation is outside that
+interval. It records wheel-to-processed-widget-snapshot latency and lateness
+for a 16 ms Qt timer, including the number of missed timer intervals. The
+snapshot latency includes event handling, event processing, and `QWidget.grab()`;
+it is not physical display frame presentation or a direct frame-rate measure.
+The probe does not measure Windows PnP enumeration/filtering or real hardware.
 
-- The time to copy the activity database to a temporary snapshot.
-- The time to query and decode matching events from that snapshot.
-- Median, minimum, and maximum Activity page rendering times over repeated runs.
-- The top Python calls by cumulative time in one render, using `cProfile`.
-
-The source database is opened read-only and copied using SQLite's backup API.
-The repository loads from the temporary copy, which is deleted when the script
-finishes. `--synthetic-events` measures rendering with generated data instead of
-database history. The Activity page currently renders up to 25 event cards per
-page, so increasing the synthetic event count does not increase the number of
-cards on the first page.
-
-### UI page construction and responsiveness
+Run from the repository root:
 
 ```powershell
-py perf\measure_ui_responsiveness.py --page activity --items 500
-py perf\measure_ui_responsiveness.py --page my-devices --items 50
-py perf\measure_ui_responsiveness.py --page find-my-device --items 50
+py perf\profile_activity.py --database activity.db --days 30 --repeat 5
+py perf\measure_ui_responsiveness.py --page find-my-device --items 50 --scroll-events 200 --json
 ```
 
-The script opens a test window populated with synthetic data. Scroll the page
-during the measurement interval. It reports:
+### Activity history
 
-- **Widget construction:** elapsed time to build the page's widgets.
-- **Initial layout/paint processing:** elapsed time processing Qt events after
-  the window is shown.
-- **UI event-loop timer lateness:** median, p95, and maximum lateness for a
-  16 ms timer while the test window is open.
+| Command | Database events | Snapshot (ms) | Query + decode (ms) | Events supplied (visible) | Render median (min-max, ms) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `--days 30 --repeat 5` | 978 | 5.30 | 1.96 | 978 (25) | 44.91 (44.83-45.40) |
+| `--synthetic-events 5000 --days all --repeat 5` | 1,293 | 2.94 | 2.05 | 5,000 (25) | 50.39 (49.11-70.27) |
 
-Timer lateness is an indicator of event-loop responsiveness, not a direct
-measurement of frame rate or of the time taken to paint an individual frame.
-The `cProfile` report covers Python calls and does not fully account for Qt's
-native layout and painting work. The probe uses synthetic devices and does not
-perform real hardware discovery.
+The second run queries 1,293 database events but renders 5,000 synthetic
+events. Rendering is repeated five times; only 25 event widgets are created on
+each render.
 
-## Initial Find My Device baseline
+### Automated scroll sample
 
-The first desktop measurement was recorded on 22 November 2026 with:
+One automated run per scenario, with 20 wheel actions at 30 ms intervals.
+Stress cases were run sequentially to avoid competing benchmark processes.
+These are verification samples, not multi-run baselines. Times are milliseconds.
 
-```powershell
-py perf\measure_ui_responsiveness.py --page find-my-device --items 50
-```
+| Page | Items | Construction | Initial paint/snapshot | Wheel snapshot median / p95 / max | Timer max lateness | Missed 16 ms intervals |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Activity | 50 | 30.35 | 28.11 | 6.56 / 8.06 / 8.08 | 3.35 | 0 |
+| My Devices | 22 | 49.37 | 14.72 | 5.04 / 6.71 / 6.87 | 3.02 | 0 |
+| My Devices | 5,000 | 4,589.93 | 1,369.65 | 11.33 / 14.48 / 141.38 | 226.37 | 21 |
+| Find My Device | 5,000 | 7,997.91 | 1,704.98 | 16.25 / 18.31 / 356.06 | 433.12 | 40 |
 
-| Measurement | Result |
-| --- | ---: |
-| Synthetic connected devices | 50 |
-| Widget construction | 143.46 ms |
-| Initial layout/paint processing | 12.52 ms |
-| Event-loop timer samples | 935 |
-| Timer lateness, median | 0.00 ms |
-| Timer lateness, p95 | 7.37 ms |
-| Timer lateness, maximum | 55.88 ms |
+Every scroll action moved the target scrollbar. At two Find My Device items
+there was no scrollable range, so no wheel latency could be measured. Repeat
+each scenario several times before treating these sample values as a baseline.
 
-This is an initial reference measurement, not a performance target. In
-particular, the single maximum lateness value does not establish a persistent
-scrolling problem. Results vary with hardware, OS load, Python/Qt versions,
-window system, and user scroll activity.
+### Previous manual-stress baseline
 
-## Comparing measurements
+These results were collected with the earlier manually scrolled probe. They
+remain useful as historical setup/event-loop measurements but cannot be
+compared directly to the automated wheel-to-snapshot results. Times are
+milliseconds; timer columns show median, p95, and maximum lateness among
+delivered timer callbacks.
 
-For a useful comparison:
+#### Activity
 
-1. Use the same computer, Python environment, page, item count, and duration.
-2. Keep the test window visible and follow the same scrolling pattern.
-3. Run each case several times and compare medians as well as p95 and maximum
-   timer lateness.
-4. Change one factor at a time, such as page type or item count.
+| Items | Duration | Widget construction | Initial layout/paint | Timer samples | Timer median | Timer p95 | Timer max |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 50 | 30 s | 29.59 | 15.39 | 1,872 | 0.26 | 1.86 | 22.89 |
+| 500 | 30 s | 29.37 | 15.28 | 1,863 | 0.14 | 1.20 | 31.66 |
+| 5,000 | 30 s | 29.81 | 16.30 | 1,864 | 0.42 | 1.47 | 30.66 |
 
-High construction time points to page/widget creation as a candidate for
-investigation. Elevated event-loop lateness during scrolling indicates that Qt
-callbacks are being delayed, but it does not by itself identify whether Python
-work, layout, or painting caused the delay. Use the Activity profiler's
-function-level results and follow-up measurements to narrow down the cause
-before optimizing.
+#### My Devices
+
+| Items | Duration | Widget construction | Initial layout/paint | Timer samples | Timer median | Timer p95 | Timer max |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 50 | 30 s | 69.72 | 15.43 | 1,875 | 0.30 | 1.48 | 13.50 |
+| 500 | 30 s | 480.69 | 45.98 | 1,874 | 0.00 | 0.00 | 18.35 |
+| 5,000 | 30 s | 4,474.34 | 1,269.26 | 1,857 | 0.00 | 12.08 | 205.18 |
+
+#### Find My Device
+
+| Items | Duration | Widget construction | Initial layout/paint | Timer samples | Timer median | Timer p95 | Timer max |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 50 | 30 s | 91.73 | 23.76 | 1,875 | 0.26 | 2.08 | 13.04 |
+| 100 | 30 s | 173.03 | 19.86 | 1,875 | 0.00 | 1.35 | 6.17 |
+| 200 | 30 s | 325.03 | 34.36 | 1,875 | 0.41 | 2.45 | 14.27 |
+| 500 | 30 s | 906.69 | 75.74 | 1,873 | 4.58 | 7.15 | 37.69 |
+| 5,000 | 30 s | 7,459.84 | 1,742.67 | 1,837 | 0.00 | 0.57 | 414.54 |
+
+## Conclusion
+
+- Activity construction stayed near 30 ms from 50 to 5,000 events, consistent
+  with its 25-card page limit.
+- Device-page construction and initial layout increased substantially with
+  card count. At 5,000 cards, My Devices took 4.47 s to construct and 1.27 s
+  for initial layout/paint; Find My Device took 7.46 s and 1.74 s.
+- The 5,000-card runs had maximum timer lateness of 205 ms (My Devices) and
+  415 ms (Find My Device). Their low p95 values do not exclude these individual
+  stalls; the probe reports delivered timer callbacks, not missed intervals.
+- The user's typical lists are 22 connected devices and 2 saved devices. These
+  synthetic stress results do not show whether actual scrolling animation is
+  choppy. The automated probe improves repeatability and records missed timer
+  deadlines, but still does not measure physical display frame presentation.
