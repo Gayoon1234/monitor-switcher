@@ -11,10 +11,36 @@ PAGES = ("activity", "my-devices", "find-my-device")
 
 
 def summarize_runs(records: list[dict]) -> dict:
+    if len({record["items"] for record in records}) != 1:
+        raise RuntimeError("Item counts changed between benchmark repeats.")
+    if len({json.dumps(record["source_counts"], sort_keys=True) for record in records}) != 1:
+        raise RuntimeError("Real data counts changed between benchmark repeats.")
+
+    wheel_medians = [
+        record["wheel_to_processed_snapshot"]["median_ms"]
+        for record in records
+    ]
+    wheel_p95s = [
+        record["wheel_to_processed_snapshot"]["p95_ms"]
+        for record in records
+    ]
+    wheel_maxima = [
+        record["wheel_to_processed_snapshot"]["max_ms"]
+        for record in records
+    ]
+    timer_maxima = [
+        record["event_loop_timer_samples"]["max_ms"]
+        for record in records
+    ]
     return {
         "page": records[0]["page"],
         "items": records[0]["items"],
         "runs": len(records),
+        "data_source": records[0]["data_source"],
+        "source_counts": records[0]["source_counts"],
+        "data_loading_median_ms": statistics.median(
+            record["data_loading_ms"] for record in records
+        ),
         "construction_median_ms": statistics.median(
             record["widget_construction_ms"] for record in records
         ),
@@ -22,21 +48,25 @@ def summarize_runs(records: list[dict]) -> dict:
             record["initial_paint_and_snapshot_ms"]
             for record in records
         ),
-        "wheel_median_ms": statistics.median(
-            record["wheel_to_processed_snapshot"]["median_ms"]
-            for record in records
+        "wheel_median_ms": (
+            statistics.median(wheel_medians)
+            if all(value is not None for value in wheel_medians)
+            else None
         ),
-        "wheel_p95_median_ms": statistics.median(
-            record["wheel_to_processed_snapshot"]["p95_ms"]
-            for record in records
+        "wheel_p95_median_ms": (
+            statistics.median(wheel_p95s)
+            if all(value is not None for value in wheel_p95s)
+            else None
         ),
-        "wheel_max_worst_ms": max(
-            record["wheel_to_processed_snapshot"]["max_ms"]
-            for record in records
+        "wheel_max_worst_ms": (
+            max(wheel_maxima)
+            if all(value is not None for value in wheel_maxima)
+            else None
         ),
-        "timer_max_worst_ms": max(
-            record["event_loop_timer_samples"]["max_ms"]
-            for record in records
+        "timer_max_worst_ms": (
+            max(timer_maxima)
+            if all(value is not None for value in timer_maxima)
+            else None
         ),
         "missed_intervals_total": sum(
             record["event_loop_missed_intervals"] for record in records
@@ -46,7 +76,8 @@ def summarize_runs(records: list[dict]) -> dict:
 
 def run_scenario(
     page: str,
-    items: int,
+    items: int | None,
+    real_data: bool,
     repeats: int,
     scroll_events: int,
     interval_ms: int,
@@ -63,14 +94,16 @@ def run_scenario(
             str(SINGLE_RUN_SCRIPT),
             "--page",
             page,
-            "--items",
-            str(items),
             "--scroll-events",
             str(scroll_events),
             "--interval-ms",
             str(interval_ms),
             "--json",
         ]
+        if real_data:
+            command.append("--real-data")
+        else:
+            command.extend(("--items", str(items)))
         completed = subprocess.run(
             command,
             capture_output=True,
@@ -84,15 +117,17 @@ def run_scenario(
             )
 
         record = json.loads(completed.stdout)
+        has_scroll_target = bool(record["scroll_targets"])
+        expected_actions = scroll_events if has_scroll_target else 0
         if (
-            record["completed_scroll_events"] != scroll_events
-            or record["scroll_events_that_moved"] != scroll_events
+            record["completed_scroll_events"] != expected_actions
+            or record["scroll_events_that_moved"] != expected_actions
         ):
             raise RuntimeError(
                 f"Benchmark did not complete all scroll actions for "
                 f"{page}, {items} items, run {run}: "
                 f"{record['completed_scroll_events']}/"
-                f"{scroll_events} actions completed, "
+                f"{expected_actions} actions completed, "
                 f"{record['scroll_events_that_moved']} moved the scrollbar."
             )
         records.append(record)
@@ -119,6 +154,11 @@ def main() -> None:
         type=int,
         default=(50, 500, 5000),
         help="synthetic item counts (default: 50 500 5000)",
+    )
+    parser.add_argument(
+        "--real-data",
+        action="store_true",
+        help="use real local activity/device data instead of synthetic tiers",
     )
     parser.add_argument(
         "--repeats",
@@ -156,10 +196,12 @@ def main() -> None:
     all_records = []
     summaries = []
     for page in args.pages:
-        for items in args.items:
+        item_counts = (None,) if args.real_data else args.items
+        for items in item_counts:
             records = run_scenario(
                 page,
                 items,
+                args.real_data,
                 args.repeats,
                 args.scroll_events,
                 args.interval_ms,
@@ -170,7 +212,8 @@ def main() -> None:
     result = {
         "settings": {
             "pages": args.pages,
-            "items": args.items,
+            "items": None if args.real_data else args.items,
+            "real_data": args.real_data,
             "repeats": args.repeats,
             "scroll_events": args.scroll_events,
             "interval_ms": args.interval_ms,
@@ -182,24 +225,26 @@ def main() -> None:
     if args.json:
         print(json.dumps(result, sort_keys=True))
     else:
+        print("Median columns aggregate runs; max columns are worst values.")
         print(
-            "Median columns are medians across runs; max columns are worst "
-            "across runs; missed intervals are totals."
-        )
-        print(
-            "Page,Items,Construction median ms,Initial median ms,"
-            "Wheel median ms,Wheel p95 median ms,Wheel max worst ms,"
-            "Timer max worst ms,Missed intervals total"
+            "Page,Data,Items,Data load median ms,Construction median ms,"
+            "Initial median ms,Wheel median ms,Wheel p95 median ms,"
+            "Wheel max worst ms,Timer max worst ms,Missed intervals total"
         )
         for summary in summaries:
+            def format_ms(value):
+                return "n/a" if value is None else f"{value:.2f}"
+
             print(
-                f"{summary['page']},{summary['items']},"
+                f"{summary['page']},{summary['data_source']},"
+                f"{summary['items']},"
+                f"{summary['data_loading_median_ms']:.2f},"
                 f"{summary['construction_median_ms']:.2f},"
                 f"{summary['initial_median_ms']:.2f},"
-                f"{summary['wheel_median_ms']:.2f},"
-                f"{summary['wheel_p95_median_ms']:.2f},"
-                f"{summary['wheel_max_worst_ms']:.2f},"
-                f"{summary['timer_max_worst_ms']:.2f},"
+                f"{format_ms(summary['wheel_median_ms'])},"
+                f"{format_ms(summary['wheel_p95_median_ms'])},"
+                f"{format_ms(summary['wheel_max_worst_ms'])},"
+                f"{format_ms(summary['timer_max_worst_ms'])},"
                 f"{summary['missed_intervals_total']}"
             )
 

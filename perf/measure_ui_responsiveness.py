@@ -20,6 +20,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QLabel,
     QMainWindow,
     QPushButton,
@@ -35,11 +36,12 @@ sys.path.insert(0, str(ROOT))
 from app.models.activity_event import ActivityEvent
 from app.models.display import Display
 from app.models.usb_device import ConfiguredUsbDevice, UsbDevice
+from app.services.config_repository import ConfigRepository
 from app.services.theme_service import ThemeService
+from app.services.usb_service import UsbService
 from app.ui.pages.activity import ActivityPage
 from app.ui.pages.find_my_device import FindMyDevicePage
 from app.ui.pages.my_devices import MyDevicesPage
-from app.ui.widgets.usb_device_card import UsbDeviceCard
 
 
 class FakeDisplayService:
@@ -84,6 +86,36 @@ class FakeUsbService(QObject):
 
     def get_configured_devices(self) -> list[ConfiguredUsbDevice]:
         return self.configured_devices
+
+
+class SnapshotUsbService(QObject):
+    devices_changed = Signal()
+
+    def __init__(
+        self,
+        devices: list[UsbDevice],
+        configured_devices: list[ConfiguredUsbDevice],
+    ):
+        super().__init__()
+        self.devices = devices
+        self.configured_devices = configured_devices
+
+    def get_devices(self) -> list[UsbDevice]:
+        return self.devices
+
+    def get_configured_devices(self) -> list[ConfiguredUsbDevice]:
+        return self.configured_devices
+
+
+class ReadOnlyDisplayService:
+    def __init__(self, displays: list[Display]):
+        self.displays = displays
+
+    def get_displays(self) -> list[Display]:
+        return self.displays
+
+    def switch_input(self, display_id: str, input_id: str) -> None:
+        raise RuntimeError("Display switching is disabled in the benchmark.")
 
 
 class EventLoopMonitor(QObject):
@@ -146,6 +178,129 @@ def create_events(count: int) -> list[ActivityEvent]:
         )
         for index in range(count)
     ]
+
+
+def read_activity_days(config_path: Path) -> int | None:
+    if not config_path.is_file():
+        return 30
+
+    with config_path.open("r", encoding="utf-8") as file:
+        config = json.load(file)
+
+    settings = config.get("settings", {})
+    if not isinstance(settings, dict):
+        raise ValueError("Application settings must be a JSON object.")
+
+    days = settings.get("activity_days", config.get("activity_days", 30))
+    if days is not None and (
+        isinstance(days, bool) or not isinstance(days, int) or days <= 0
+    ):
+        raise ValueError("Activity history days must be positive or null.")
+    return days
+
+
+def load_benchmark_data(
+    page_name: str,
+    count: int,
+    real_data: bool,
+):
+    load_start = perf_counter()
+    activity_history = None
+    activity_days = None
+    display_service = None
+    usb_service = None
+    source_counts = {
+        "activity_events": None,
+        "connected_usb_devices": None,
+        "configured_usb_devices": None,
+        "displays": None,
+    }
+
+    if not real_data:
+        if page_name == "activity":
+            activity_history = create_events(count)
+            source_counts["activity_events"] = len(activity_history)
+        else:
+            usb_service = FakeUsbService(count)
+            source_counts["connected_usb_devices"] = count
+            source_counts["configured_usb_devices"] = count
+            if page_name == "my-devices":
+                display_service = FakeDisplayService()
+                source_counts["displays"] = len(
+                    display_service.get_displays()
+                )
+    else:
+        if sys.platform != "win32":
+            raise RuntimeError("--real-data requires Windows.")
+
+        if page_name == "activity":
+            from perf.profile_activity import load_history_snapshot
+
+            activity_days = read_activity_days(ROOT / "config.json")
+            activity_history, _, _ = load_history_snapshot(
+                ROOT / "activity.db",
+                activity_days,
+            )
+            source_counts["activity_events"] = len(activity_history)
+        else:
+            from app.hardware.windows_usb import WindowsUsbDeviceMonitor
+
+            repository = ConfigRepository(str(ROOT / "config.json"))
+            real_usb_service = UsbService(
+                WindowsUsbDeviceMonitor(),
+                repository,
+            )
+            connected_devices = real_usb_service.get_devices()
+            configured_devices = (
+                real_usb_service.get_configured_devices()
+            )
+            usb_service = SnapshotUsbService(
+                connected_devices,
+                configured_devices,
+            )
+            source_counts["connected_usb_devices"] = len(
+                connected_devices
+            )
+            source_counts["configured_usb_devices"] = len(
+                configured_devices
+            )
+
+            if page_name == "my-devices":
+                from app.hardware.windows_monitor import (
+                    WindowsMonitorController,
+                )
+
+                display_controller = WindowsMonitorController()
+                displays = display_controller.get_displays()
+                display_service = ReadOnlyDisplayService(displays)
+                source_counts["displays"] = len(displays)
+
+        if page_name == "activity":
+            item_count = len(activity_history)
+        elif page_name == "my-devices":
+            item_count = len(configured_devices)
+        else:
+            item_count = len(connected_devices)
+
+        return (
+            activity_history,
+            activity_days,
+            display_service,
+            usb_service,
+            item_count,
+            source_counts,
+            (perf_counter() - load_start) * 1000,
+        )
+
+    return (
+        activity_history,
+        activity_days,
+        display_service,
+        usb_service,
+        count,
+        source_counts,
+        (perf_counter() - load_start) * 1000,
+    )
 
 
 def find_scroll_targets(page: QWidget) -> list[ScrollTarget]:
@@ -217,11 +372,20 @@ def send_wheel_event(
     return elapsed_ms, value_delta
 
 
-def build_page(page_name: str, count: int, usb_service: FakeUsbService):
+def build_page(
+    page_name: str,
+    activity_history: list[ActivityEvent] | None,
+    activity_days: int | None,
+    display_service,
+    usb_service,
+):
     if page_name == "activity":
-        return ActivityPage(activity_history=create_events(count), days=None)
+        return ActivityPage(
+            activity_history=activity_history,
+            days=activity_days,
+        )
     if page_name == "my-devices":
-        return MyDevicesPage(FakeDisplayService(), usb_service)
+        return MyDevicesPage(display_service, usb_service)
     return FindMyDevicePage(usb_service)
 
 
@@ -244,6 +408,14 @@ def main() -> None:
         help="synthetic event/device count (default: 100)",
     )
     parser.add_argument(
+        "--real-data",
+        action="store_true",
+        help=(
+            "use local activity data and live, read-only Windows device "
+            "discovery instead of synthetic inputs"
+        ),
+    )
+    parser.add_argument(
         "--scroll-events",
         type=int,
         default=200,
@@ -261,7 +433,7 @@ def main() -> None:
         help="write the results as one JSON object",
     )
     args = parser.parse_args()
-    if args.items <= 0:
+    if not args.real_data and args.items <= 0:
         parser.error("--items must be positive")
     if args.scroll_events <= 0:
         parser.error("--scroll-events must be positive")
@@ -275,18 +447,39 @@ def main() -> None:
 
     screen = app.primaryScreen()
     screen_geometry = screen.geometry() if screen is not None else None
-    usb_service = FakeUsbService(args.items)
     window = QMainWindow()
     window.resize(1000, 700)
     content = QWidget()
     layout = QVBoxLayout(content)
-    layout.addWidget(QLabel("Automated synthetic scroll benchmark"))
+    layout.addWidget(
+        QLabel(
+            "Automated "
+            + ("real-data" if args.real_data else "synthetic")
+            + " scroll benchmark"
+        )
+    )
 
+    (
+        activity_history,
+        activity_days,
+        display_service,
+        usb_service,
+        item_count,
+        source_counts,
+        data_loading_ms,
+    ) = load_benchmark_data(args.page, args.items, args.real_data)
     setup_start = perf_counter()
-    page = build_page(args.page, args.items, usb_service)
-    for card in page.findChildren(UsbDeviceCard):
-        for button in card.findChildren(QPushButton):
-            button.setEnabled(False)
+    page = build_page(
+        args.page,
+        activity_history,
+        activity_days,
+        display_service,
+        usb_service,
+    )
+    for button in page.findChildren(QPushButton):
+        button.setEnabled(False)
+    for selector in page.findChildren(QComboBox):
+        selector.setEnabled(False)
     setup_ms = (perf_counter() - setup_start) * 1000
 
     layout.addWidget(page, 1)
@@ -344,7 +537,11 @@ def main() -> None:
             ),
         },
         "page": args.page,
-        "items": args.items,
+        "data_source": "real" if args.real_data else "synthetic",
+        "items": item_count,
+        "source_counts": source_counts,
+        "activity_days": activity_days,
+        "data_loading_ms": data_loading_ms,
         "scroll_targets": [target.name for target in targets],
         "requested_scroll_events": args.scroll_events,
         "scroll_interval_ms": args.interval_ms,
@@ -364,7 +561,11 @@ def main() -> None:
     if args.json:
         print(json.dumps(result, sort_keys=True))
     else:
-        print(f"Page: {result['page']} ({result['items']} items)")
+        print(
+            f"Page: {result['page']} ({result['items']} items; "
+            f"{result['data_source']} data)"
+        )
+        print(f"Data loading: {result['data_loading_ms']:.2f} ms")
         print(
             "Scrollable targets: "
             + (", ".join(result["scroll_targets"]) or "none")

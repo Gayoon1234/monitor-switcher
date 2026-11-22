@@ -46,3 +46,16 @@ in Python's `cProfile` output.
 5,000 items, three times per scenario, with 20 automated wheel actions per
 run. It reports medians across runs, worst-case timings, and total missed
 timer intervals. Pass `--json` to include settings and raw per-run results.
+
+To run the same page tests using the configured activity history and
+read-only live Windows device/display data:
+
+```powershell
+python perf\run_ui_benchmark_matrix.py --real-data --json
+```
+
+Real-data mode uses the production page widgets and current data snapshots,
+disables page actions, does not start USB automation monitoring, and does not
+write to configuration or activity data. It reports data-loading time
+separately from widget construction. On Windows, USB and display discovery
+requires access to the relevant WMI and monitor APIs.

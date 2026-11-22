@@ -11,6 +11,7 @@ This page tracks ideas for future Monitor Switcher features and improvements.
 Ideas ready to be considered for upcoming releases.
 
 - In addition to input source, allow automations to change brightness/contrast settings as desired.
+- Explore pagination or another scalable presentation for device cards on the My Devices and Find My Device pages.
 
 ## QoL/Things I forgot to add
 

@@ -12,27 +12,31 @@ pages create one card per item.
 
 ## Data/Results
 
-Measurements were collected on 22 November 2026 using synthetic UI data and the
-local activity database.
+Measurements were collected on 22 November 2026 using synthetic UI data,
+configured activity history, and live Windows device/display discovery.
 
 `profile_activity.py` copies the activity database to a temporary snapshot,
 times history loading/decoding, then measures repeated `set_events()` rendering.
 The source database is read-only. Activity displays 25 event cards per page.
 
-`measure_ui_responsiveness.py` creates the page from synthetic data, then
-automatically sends wheel events to its scrollable areas. Widget construction
-is timed with `perf_counter`; synthetic data generation is outside that
-interval. It records wheel-to-processed-widget-snapshot latency and lateness
-for a 16 ms Qt timer, including the number of missed timer intervals. The
-snapshot latency includes event handling, event processing, and `QWidget.grab()`;
-it is not physical display frame presentation or a direct frame-rate measure.
-The probe does not measure Windows PnP enumeration/filtering or real hardware.
+`measure_ui_responsiveness.py` uses the production page widgets and automatically
+sends wheel events to scrollable areas. Synthetic data preparation and real
+data discovery are timed separately from widget construction. Real-data mode
+reads the configured activity period and a read-only database snapshot, USB
+devices through the Windows monitor, and displays through read-only discovery.
+Page actions and display selectors are disabled; the benchmark does not start
+the app's automation monitor or write to configuration, activity data, or
+display inputs. It records wheel-to-processed-widget-snapshot latency and
+lateness for a 16 ms Qt timer, including missed timer intervals. Snapshot
+latency includes event handling, event processing, and `QWidget.grab()`; it is
+not physical display frame presentation or a direct frame-rate measure.
 
 Run from the repository root:
 
 ```powershell
 py perf\profile_activity.py --database activity.db --days 30 --repeat 5
 py perf\measure_ui_responsiveness.py --page find-my-device --items 50 --scroll-events 200 --json
+py perf\run_ui_benchmark_matrix.py --real-data --json
 ```
 
 ### Activity history
@@ -48,8 +52,8 @@ each render.
 
 ### Automated scroll sample
 
-Run the full 27-scenario matrix (three pages, three item counts, and three
-repeats) sequentially with one command:
+Run the full synthetic 27-scenario matrix (three pages, three item counts, and
+three repeats) sequentially with one command:
 
 ```powershell
 py perf\run_ui_benchmark_matrix.py
@@ -59,20 +63,56 @@ Each run sends 20 wheel actions at 30 ms intervals. Add `--json` to output
 settings, every raw run, and the aggregate results as JSON. All wheel actions
 in these runs moved the target scrollbar. Times are milliseconds.
 
-Median columns below are medians across the three runs; max columns are the
-worst value across those runs; missed intervals are totals across all three.
+Data loading is measured separately; synthetic data generation is not included
+in construction time. Median columns below are medians across the three runs;
+max columns are the worst value across those runs; missed intervals are totals
+across all three.
 
-| Page | Items | Construction median (ms) | Initial paint/snapshot median (ms) | Wheel snapshot median (ms) | Wheel snapshot p95 (ms) | Wheel snapshot max (ms) | Timer max lateness (ms) | Missed 16 ms intervals |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Activity | 50 | 30.87 | 20.39 | 6.81 | 9.50 | 10.91 | 5.43 | 0 |
-| Activity | 500 | 32.37 | 20.03 | 7.65 | 9.90 | 12.71 | 7.37 | 0 |
-| Activity | 5,000 | 37.24 | 20.32 | 7.59 | 9.79 | 11.52 | 6.47 | 0 |
-| My Devices | 50 | 72.13 | 15.98 | 5.51 | 7.69 | 8.78 | 6.87 | 0 |
-| My Devices | 500 | 476.45 | 53.30 | 6.26 | 8.79 | 22.13 | 21.61 | 3 |
-| My Devices | 5,000 | 4,629.04 | 1,226.25 | 11.47 | 13.71 | 142.95 | 229.37 | 62 |
-| Find My Device | 50 | 96.30 | 18.74 | 8.41 | 10.95 | 11.98 | 7.05 | 0 |
-| Find My Device | 500 | 791.12 | 85.98 | 8.77 | 11.53 | 42.54 | 40.39 | 9 |
-| Find My Device | 5,000 | 8,080.27 | 1,764.79 | 15.29 | 17.76 | 370.32 | 450.08 | 123 |
+| Page | Items | Data load median (ms) | Construction median (ms) | Initial paint/snapshot median (ms) | Wheel snapshot median (ms) | Wheel snapshot p95 (ms) | Wheel snapshot max (ms) | Timer max lateness (ms) | Missed 16 ms intervals |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Activity | 50 | 0.09 | 31.06 | 21.44 | 7.02 | 9.06 | 10.09 | 6.33 | 0 |
+| Activity | 500 | 0.84 | 31.36 | 22.32 | 7.00 | 9.68 | 11.65 | 8.00 | 0 |
+| Activity | 5,000 | 5.99 | 31.01 | 21.47 | 7.40 | 9.71 | 11.67 | 7.93 | 0 |
+| My Devices | 50 | 0.34 | 71.45 | 17.81 | 5.77 | 8.91 | 10.51 | 9.27 | 0 |
+| My Devices | 500 | 0.88 | 477.32 | 53.52 | 5.83 | 8.61 | 20.17 | 18.61 | 3 |
+| My Devices | 5,000 | 8.53 | 4,621.91 | 1,292.49 | 11.95 | 15.25 | 145.51 | 228.61 | 62 |
+| Find My Device | 50 | 0.34 | 96.99 | 19.78 | 7.72 | 10.47 | 11.63 | 6.89 | 0 |
+| Find My Device | 500 | 0.88 | 795.02 | 85.73 | 8.69 | 11.24 | 43.52 | 43.74 | 9 |
+| Find My Device | 5,000 | 8.15 | 7,817.59 | 1,706.28 | 16.21 | 19.29 | 357.81 | 435.52 | 120 |
+
+### Read-only real-data comparison
+
+Run three real-data repetitions per page with:
+
+```powershell
+py perf\run_ui_benchmark_matrix.py --real-data --json
+```
+
+This uses the production page widgets with read-only snapshots from the
+configured activity database, USB WMI enumeration, and display discovery.
+Buttons and input selectors are disabled. The benchmark does not start
+`main.py`, its USB automation monitor, or any display-switch actions. Item
+counts remained stable across repeats. Median columns are medians across the
+three runs; maximum columns are worst values across the runs. Times are
+milliseconds.
+
+| Page | Real data shown | Data load median (ms) | Construction median (ms) | Initial paint/snapshot median (ms) | Wheel snapshot median (ms) | Wheel snapshot p95 (ms) | Wheel snapshot max (ms) | Timer max lateness (ms) | Missed 16 ms intervals |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Activity | 306 events, last 7 days | 43.65 | 31.79 | 19.68 | 7.38 | 8.79 | 10.26 | 8.95 | 0 |
+| My Devices | 2 saved cards; 22 connected USB devices; 2 displays | 3,958.67 | 34.29 | 13.49 | n/a | n/a | n/a | n/a | 0 |
+| Find My Device | 22 connected USB devices; 2 saved devices | 476.92 | 72.19 | 20.02 | 6.37 | 8.20 | 17.10 | 16.26 | 1 |
+
+The My Devices run had no scrollable range with two saved cards, so it has no
+wheel or timer samples. Its approximately 3.96 s data-loading time includes
+live device/display discovery and is separate from the 34 ms widget
+construction time.
+
+Synthetic comparisons at the same item counts were also run three times.
+At 306 Activity events, synthetic versus real widget construction was
+30.76 ms versus 31.79 ms, with wheel p95 of 9.51 ms versus 8.79 ms. At 22
+Find My Device cards, construction was 54.32 ms versus 72.19 ms, with wheel
+p95 of 9.83 ms versus 8.20 ms. My Devices at two saved cards had no scroll
+range in either case.
 
 The totals and worst-case timings show occasional long UI-thread stalls as
 item counts rise, particularly at 5,000 items. The two-device Find My Device
@@ -114,15 +154,19 @@ delivered timer callbacks.
 
 ## Conclusion
 
-- Activity construction stayed near 30 ms from 50 to 5,000 events, consistent
-  with its 25-card page limit.
-- Device-page construction and initial layout increased substantially with
-  card count. At 5,000 cards, My Devices took 4.47 s to construct and 1.27 s
-  for initial layout/paint; Find My Device took 7.46 s and 1.74 s.
-- The 5,000-card runs had maximum timer lateness of 205 ms (My Devices) and
-  415 ms (Find My Device). Their low p95 values do not exclude these individual
-  stalls; the probe reports delivered timer callbacks, not missed intervals.
-- The user's typical lists are 22 connected devices and 2 saved devices. These
-  synthetic stress results do not show whether actual scrolling animation is
-  choppy. The automated probe improves repeatability and records missed timer
-  deadlines, but still does not measure physical display frame presentation.
+- Overall, UI responsiveness looks good for the current real-world device
+  counts; no immediate UI optimization is indicated. However, the device pages
+  do not scale well to very large lists.
+- Activity stayed near 31 ms of widget construction from 50 to 5,000 synthetic
+  events, consistent with rendering only its first 25 event cards.
+- Device-card construction and initial paint grew substantially at high
+  synthetic counts. At 5,000 cards, worst timer lateness was 229 ms for My
+  Devices and 436 ms for Find My Device.
+- With current real data (22 connected USB devices and 2 saved devices), the
+  Find My Device page had a 6.37 ms median wheel response and one missed timer
+  interval across three runs. My Devices had no overflow with two saved cards.
+- Data loading is a separate concern: My Devices real-data discovery took
+  about 3.96 s, compared with about 34 ms for widget construction. Profile
+  hardware discovery separately before attributing that delay to UI rendering.
+- These are QWidget snapshot and event-loop measurements, not physical display
+  frame times. They do not prove frame-rate or compositor behavior.
