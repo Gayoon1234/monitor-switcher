@@ -11,6 +11,7 @@ python perf\profile_activity.py --synthetic-events 5000 --days all
 python perf\measure_ui_responsiveness.py --page activity --items 500
 python perf\measure_ui_responsiveness.py --page my-devices --items 50
 python perf\measure_ui_responsiveness.py --page find-my-device --items 50
+python perf\run_ui_benchmark_matrix.py
 ```
 
 `profile_activity.py` reports database load time, median Activity rendering
@@ -40,3 +41,8 @@ construction or layout work; event-loop lateness while scrolling indicates
 that the UI thread is missing scheduled timer intervals. Neither measurement
 alone proves the cause, and Qt's native painting time is not fully represented
 in Python's `cProfile` output.
+
+`run_ui_benchmark_matrix.py` sequentially runs all three pages at 50, 500, and
+5,000 items, three times per scenario, with 20 automated wheel actions per
+run. It reports medians across runs, worst-case timings, and total missed
+timer intervals. Pass `--json` to include settings and raw per-run results.

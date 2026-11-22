@@ -37,10 +37,10 @@ py perf\measure_ui_responsiveness.py --page find-my-device --items 50 --scroll-e
 
 ### Activity history
 
-| Command | Database events | Snapshot (ms) | Query + decode (ms) | Events supplied (visible) | Render median (min-max, ms) |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| `--days 30 --repeat 5` | 978 | 5.30 | 1.96 | 978 (25) | 44.91 (44.83-45.40) |
-| `--synthetic-events 5000 --days all --repeat 5` | 1,293 | 2.94 | 2.05 | 5,000 (25) | 50.39 (49.11-70.27) |
+| Command | Database events | Snapshot (ms) | Query + decode (ms) | Events supplied (visible) | Render median (ms) | Render min (ms) | Render max (ms) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `--days 30 --repeat 5` | 978 | 5.30 | 1.96 | 978 (25) | 44.91 | 44.83 | 45.40 |
+| `--synthetic-events 5000 --days all --repeat 5` | 1,293 | 2.94 | 2.05 | 5,000 (25) | 50.39 | 49.11 | 70.27 |
 
 The second run queries 1,293 database events but renders 5,000 synthetic
 events. Rendering is repeated five times; only 25 event widgets are created on
@@ -48,20 +48,35 @@ each render.
 
 ### Automated scroll sample
 
-One automated run per scenario, with 20 wheel actions at 30 ms intervals.
-Stress cases were run sequentially to avoid competing benchmark processes.
-These are verification samples, not multi-run baselines. Times are milliseconds.
+Run the full 27-scenario matrix (three pages, three item counts, and three
+repeats) sequentially with one command:
 
-| Page | Items | Construction | Initial paint/snapshot | Wheel snapshot median / p95 / max | Timer max lateness | Missed 16 ms intervals |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Activity | 50 | 30.35 | 28.11 | 6.56 / 8.06 / 8.08 | 3.35 | 0 |
-| My Devices | 22 | 49.37 | 14.72 | 5.04 / 6.71 / 6.87 | 3.02 | 0 |
-| My Devices | 5,000 | 4,589.93 | 1,369.65 | 11.33 / 14.48 / 141.38 | 226.37 | 21 |
-| Find My Device | 5,000 | 7,997.91 | 1,704.98 | 16.25 / 18.31 / 356.06 | 433.12 | 40 |
+```powershell
+py perf\run_ui_benchmark_matrix.py
+```
 
-Every scroll action moved the target scrollbar. At two Find My Device items
-there was no scrollable range, so no wheel latency could be measured. Repeat
-each scenario several times before treating these sample values as a baseline.
+Each run sends 20 wheel actions at 30 ms intervals. Add `--json` to output
+settings, every raw run, and the aggregate results as JSON. All wheel actions
+in these runs moved the target scrollbar. Times are milliseconds.
+
+Median columns below are medians across the three runs; max columns are the
+worst value across those runs; missed intervals are totals across all three.
+
+| Page | Items | Construction median (ms) | Initial paint/snapshot median (ms) | Wheel snapshot median (ms) | Wheel snapshot p95 (ms) | Wheel snapshot max (ms) | Timer max lateness (ms) | Missed 16 ms intervals |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Activity | 50 | 30.87 | 20.39 | 6.81 | 9.50 | 10.91 | 5.43 | 0 |
+| Activity | 500 | 32.37 | 20.03 | 7.65 | 9.90 | 12.71 | 7.37 | 0 |
+| Activity | 5,000 | 37.24 | 20.32 | 7.59 | 9.79 | 11.52 | 6.47 | 0 |
+| My Devices | 50 | 72.13 | 15.98 | 5.51 | 7.69 | 8.78 | 6.87 | 0 |
+| My Devices | 500 | 476.45 | 53.30 | 6.26 | 8.79 | 22.13 | 21.61 | 3 |
+| My Devices | 5,000 | 4,629.04 | 1,226.25 | 11.47 | 13.71 | 142.95 | 229.37 | 62 |
+| Find My Device | 50 | 96.30 | 18.74 | 8.41 | 10.95 | 11.98 | 7.05 | 0 |
+| Find My Device | 500 | 791.12 | 85.98 | 8.77 | 11.53 | 42.54 | 40.39 | 9 |
+| Find My Device | 5,000 | 8,080.27 | 1,764.79 | 15.29 | 17.76 | 370.32 | 450.08 | 123 |
+
+The totals and worst-case timings show occasional long UI-thread stalls as
+item counts rise, particularly at 5,000 items. The two-device Find My Device
+case has no scrollable range and is not included in this matrix.
 
 ### Previous manual-stress baseline
 
