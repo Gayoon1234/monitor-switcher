@@ -23,17 +23,18 @@ still run.
 ## Event handling
 
 Call `handle_device_event(event)` when the USB monitor reports a connection or
-disconnection. The service:
+disconnection. Raw connection events are used for matching but are not written
+to Activity history. The service:
 
-1. Records a successful `device_event`.
-2. Checks each automation, skipping disabled entries and requiring both the
+1. Checks each automation, skipping disabled entries and requiring both the
    configured device ID and connected/disconnected trigger type to match.
-3. Records an `automation_triggered` event and runs the matching automation's
+2. Records an `automation_triggered` event and runs the matching automation's
    actions in order.
 
 `DO_NOTHING` actions are skipped. `SWITCH_INPUT` actions call
 `DisplayService.switch_input(display_id, input_id)`. A failed switch is logged
-and recorded as a failed `action` event; remaining actions continue.
+and recorded as a failed `action` event; a successful switch is recorded as a
+successful `action` event. Remaining actions continue after a failure.
 
 ## Activity methods
 

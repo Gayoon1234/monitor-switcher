@@ -6,7 +6,9 @@ sidebar_position: 1
 
 ## Activity events
 
-The `ActivityEvent` model is used to store when certain events are triggered. These can be automations being triggered, displays changing, or devices connecting/disconnecting.
+The `ActivityEvent` model stores automation-trigger and action outcomes.
+Raw USB connection events are used to evaluate automation triggers but are not
+stored as new Activity events.
 
 For example, if an automation is triggered, that would create a "Automation triggered" event, then if that automation defines multiple actions, each action will create an additional event.
 
@@ -26,6 +28,8 @@ class ActivityEvent:
 ```
 
 - `timestamp`: Automatically added by the automation service methods that create events.
-- `event_type`: This can be `device_event`, `automation_triggered`, or `action`, although there is no hard validation.
+- `event_type`: `automation_triggered` or `action` for newly recorded events.
+  Older databases may still contain `device_event` records; the repository
+  excludes those legacy records from loaded Activity history.
 - `message`: A free-text field used to describe the event.
 - `success`: A Boolean value that is set to `false` when an event is emitted from a catch block after the internal code interacts with hardware.

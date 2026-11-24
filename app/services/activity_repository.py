@@ -53,12 +53,13 @@ class ActivityRepository:
         query = """
             SELECT timestamp, event_type, message, success
             FROM activity_events
+            WHERE event_type != ?
         """
-        parameters = ()
+        parameters = ("device_event",)
         if days is not None:
             cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-            query += " WHERE julianday(timestamp) >= julianday(?)"
-            parameters = (cutoff.isoformat(),)
+            query += " AND julianday(timestamp) >= julianday(?)"
+            parameters += (cutoff.isoformat(),)
         query += " ORDER BY id ASC"
 
         cursor = self._connection.execute(

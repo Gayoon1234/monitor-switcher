@@ -104,12 +104,11 @@ def test_matching_enabled_automation_executes_action(qapp):
         event.event_type
         for event in repository.events
     ] == [
-        "device_event",
         "automation_triggered",
         "action",
     ]
 
-    assert repository.events[2].success is True
+    assert repository.events[1].success is True
 
 
 def test_wrong_device_does_not_execute_automation(qapp):
@@ -135,10 +134,7 @@ def test_wrong_device_does_not_execute_automation(qapp):
     )
 
     assert display_service.calls == []
-    assert [
-        event.event_type
-        for event in repository.events
-    ] == ["device_event"]
+    assert repository.events == []
 
 
 def test_disabled_automation_does_not_execute(qapp):
@@ -165,10 +161,7 @@ def test_disabled_automation_does_not_execute(qapp):
     )
 
     assert display_service.calls == []
-    assert [
-        event.event_type
-        for event in repository.events
-    ] == ["device_event"]
+    assert repository.events == []
 
 
 def test_connected_event_does_not_match_disconnected_trigger(qapp):
@@ -195,10 +188,7 @@ def test_connected_event_does_not_match_disconnected_trigger(qapp):
     )
 
     assert display_service.calls == []
-    assert [
-        event.event_type
-        for event in repository.events
-    ] == ["device_event"]
+    assert repository.events == []
 
 
 def test_disconnected_event_matches_disconnected_trigger(qapp):
@@ -232,7 +222,6 @@ def test_disconnected_event_matches_disconnected_trigger(qapp):
         event.event_type
         for event in repository.events
     ] == [
-        "device_event",
         "automation_triggered",
         "action",
     ]
@@ -262,7 +251,6 @@ def test_do_nothing_action_does_not_call_display_service(qapp):
         event.event_type
         for event in repository.events
     ] == [
-        "device_event",
         "automation_triggered",
     ]
 
@@ -303,7 +291,6 @@ def test_multiple_actions_are_all_executed(qapp):
         event.event_type
         for event in repository.events
     ] == [
-        "device_event",
         "automation_triggered",
         "action",
         "action",
@@ -436,7 +423,6 @@ def test_pausing_activity_logging_keeps_automations_running(qapp):
     )
 
     assert [event.event_type for event in repository.events] == [
-        "device_event",
         "automation_triggered",
         "action",
     ]

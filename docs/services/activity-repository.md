@@ -3,8 +3,8 @@ title: ActivityRepository
 ---
 
 `ActivityRepository` persists [`ActivityEvent`](../models/Event%20Models/activity-event)
-records in a SQLite database. The activity history is used to show device
-events, automation triggers, and action results.
+records in a SQLite database. Activity history shows automation triggers and
+action results; raw device connection events are not included.
 
 ## Construction
 
@@ -23,7 +23,7 @@ table if it does not already exist.
 - `load(days=None)` returns events in insertion order. If `days` is supplied,
   it must be a positive integer and results are limited to that many days
   before the current UTC time. Timestamps are parsed back into `datetime`
-  objects.
+  objects. Legacy `device_event` rows are excluded but not deleted.
 - `clear()` deletes all activity rows.
 - `close()` closes the underlying SQLite connection. Close the repository when
   the application context is shut down.
