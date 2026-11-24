@@ -1,6 +1,6 @@
 ---
 id: performance-testing
-title: Performance Testing (UI)
+title: Performance Testing
 sidebar_position: 2
 ---
 
@@ -8,11 +8,12 @@ sidebar_position: 2
 
 Scrolling lag may be caused by UI work increasing with the number of visible
 widgets. Activity pagination should keep rendered event cards bounded; device
-pages create one card per item.
+pages create one card per item. Separately, USB monitoring may delay the UI:
+the 500 ms poll calls synchronous Windows device enumeration.
 
 ## Data/Results
 
-Measurements were collected on 22 November 2026 using synthetic UI data,
+Measurements were collected on 22 and 24 November 2026 using synthetic UI data,
 configured activity history, and live Windows device/display discovery.
 
 `profile_activity.py` copies the activity database to a temporary snapshot,
@@ -35,9 +36,15 @@ Run from the repository root:
 
 ```powershell
 py perf\profile_activity.py --database activity.db --days 30 --repeat 5
+py perf\benchmark_hardware.py --target usb --iterations 5 --warmups 1
+py perf\benchmark_hardware.py --target displays --iterations 3 --warmups 1
 py perf\measure_ui_responsiveness.py --page find-my-device --items 50 --scroll-events 200 --json
 py perf\run_ui_benchmark_matrix.py --real-data --json
 ```
+
+`benchmark_hardware.py` separately times live USB enumeration and display
+discovery. It queries monitor capabilities and current inputs but does not
+switch inputs or modify application data.
 
 ### Activity history
 
@@ -49,6 +56,19 @@ py perf\run_ui_benchmark_matrix.py --real-data --json
 The second run queries 1,293 database events but renders 5,000 synthetic
 events. Rendering is repeated five times; only 25 event widgets are created on
 each render.
+
+### Hardware discovery (Windows 11, 24 November 2026)
+
+One warmup was excluded. USB enumeration ran five timed iterations; display
+discovery ran three. Times are milliseconds; p95 uses these small samples.
+
+| Operation | Result count | Runs | Median (ms) | p95 (ms) | Min (ms) | Max (ms) |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| USB enumeration | 22 present USB devices | 5 | 394.78 | 402.31 | 389.79 | 402.31 |
+| Display discovery and input queries | 2 displays; 4 inputs | 3 | 3,576.60 | 4,337.26 | 3,464.84 | 4,337.26 |
+
+Monitor-object initialization took 1.29 ms (one measurement). The reported
+p95 is based on only three or five samples and is therefore a coarse estimate.
 
 ### Automated scroll sample
 
@@ -168,5 +188,10 @@ delivered timer callbacks.
 - Data loading is a separate concern: My Devices real-data discovery took
   about 3.96 s, compared with about 34 ms for widget construction. Profile
   hardware discovery separately before attributing that delay to UI rendering.
+- Hardware profiling measured USB enumeration at a 395 ms median. The app polls
+  every 500 ms on the Qt main thread, so each synchronous query occupies about
+  79% of that interval and is a strong candidate cause of recurring UI stalls.
+  Display discovery took about 3.58 s for two displays, affecting startup/data
+  loading rather than each USB polling cycle.
 - These are QWidget snapshot and event-loop measurements, not physical display
   frame times. They do not prove frame-rate or compositor behavior.

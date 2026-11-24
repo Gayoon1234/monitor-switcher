@@ -8,6 +8,7 @@ From the repository root:
 ```powershell
 python perf\profile_activity.py --database activity.db --days 30
 python perf\profile_activity.py --synthetic-events 5000 --days all
+python perf\benchmark_hardware.py --target all --iterations 5 --warmups 1
 python perf\measure_ui_responsiveness.py --page activity --items 500
 python perf\measure_ui_responsiveness.py --page my-devices --items 50
 python perf\measure_ui_responsiveness.py --page find-my-device --items 50
@@ -17,6 +18,12 @@ python perf\run_ui_benchmark_matrix.py
 `profile_activity.py` reports database load time, median Activity rendering
 time, and the most expensive Python calls in one render. The database is copied
 using SQLite's read-only backup API before it is opened by the repository.
+
+`benchmark_hardware.py` measures actual Windows USB enumeration and display
+discovery. It reports per-call timings and counts after optional warmups.
+Display timing includes monitor capability and current-input queries; it never
+switches inputs or writes application data. Run with `--target usb` or
+`--target displays` to isolate either path.
 
 `measure_ui_responsiveness.py` opens a test window populated with synthetic
 events or devices and automatically sends wheel events to its scrollable
