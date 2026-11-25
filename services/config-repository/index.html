@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">ConfigRepository | Monitor Switcher</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://gayoon1234.github.io/monitor-switcher/services/config-repository"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="ConfigRepository | Monitor Switcher"><meta data-rh="true" name="description" content="ConfigRepository reads and writes the application&#x27;s config.json file. It"><meta data-rh="true" property="og:description" content="ConfigRepository reads and writes the application&#x27;s config.json file. It"><link data-rh="true" rel="canonical" href="https://gayoon1234.github.io/monitor-switcher/services/config-repository"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/services/config-repository" hreflang="en"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/services/config-repository" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ConfigRepository","item":"https://gayoon1234.github.io/monitor-switcher/services/config-repository"}]}</script><link rel="stylesheet" href="/monitor-switcher/assets/css/styles.9272167e.css">
-<script src="/monitor-switcher/assets/js/runtime~main.2423571e.js" defer="defer"></script>
+<script src="/monitor-switcher/assets/js/runtime~main.4af94ef3.js" defer="defer"></script>
 <script src="/monitor-switcher/assets/js/main.55419a7a.js" defer="defer"></script>
 </head>
 <body>
@@ -48,6 +48,13 @@ no period has been saved. <code>None</code> represents all activity.</li>
 <li class=""><code>load_store_activity_logs()</code> returns whether new activity is recorded,
 defaulting to <code>True</code>.</li>
 <li class=""><code>save_store_activity_logs(enabled)</code> persists whether activity is recorded.</li>
+<li class=""><code>load_usb_monitor_enabled()</code> returns whether USB event monitoring is on,
+defaulting to <code>True</code>.</li>
+<li class=""><code>save_usb_monitor_enabled(enabled)</code> persists whether USB event monitoring
+is on.</li>
+<li class=""><code>load_usb_monitor_interval_ms()</code> returns the USB polling interval in
+milliseconds, defaulting to <code>500</code>.</li>
+<li class=""><code>save_usb_monitor_interval_ms(interval_ms)</code> persists the polling interval.</li>
 </ul>
 <p>These preferences are stored under the <code>settings</code> object in <code>config.json</code>.
 Legacy top-level <code>activity_days</code> values are migrated there when settings are

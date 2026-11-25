@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">AutomationService | Monitor Switcher</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://gayoon1234.github.io/monitor-switcher/services/automation-service"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="AutomationService | Monitor Switcher"><meta data-rh="true" name="description" content="AutomationService handles USB DeviceEvent"><meta data-rh="true" property="og:description" content="AutomationService handles USB DeviceEvent"><link data-rh="true" rel="canonical" href="https://gayoon1234.github.io/monitor-switcher/services/automation-service"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/services/automation-service" hreflang="en"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/services/automation-service" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"AutomationService","item":"https://gayoon1234.github.io/monitor-switcher/services/automation-service"}]}</script><link rel="stylesheet" href="/monitor-switcher/assets/css/styles.9272167e.css">
-<script src="/monitor-switcher/assets/js/runtime~main.2423571e.js" defer="defer"></script>
+<script src="/monitor-switcher/assets/js/runtime~main.4af94ef3.js" defer="defer"></script>
 <script src="/monitor-switcher/assets/js/main.55419a7a.js" defer="defer"></script>
 </head>
 <body>
@@ -25,9 +25,9 @@ emitted, but device events continue to be handled and matching automations
 still run.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="event-handling">Event handling<a href="#event-handling" class="hash-link" aria-label="Direct link to Event handling" title="Direct link to Event handling" translate="no">​</a></h2>
 <p>Call <code>handle_device_event(event)</code> when the USB monitor reports a connection or
-disconnection. The service:</p>
+disconnection. Raw connection events are used for matching but are not written
+to Activity history. The service:</p>
 <ol>
-<li class="">Records a successful <code>device_event</code>.</li>
 <li class="">Checks each automation, skipping disabled entries and requiring both the
 configured device ID and connected/disconnected trigger type to match.</li>
 <li class="">Records an <code>automation_triggered</code> event and runs the matching automation&#x27;s
@@ -35,7 +35,8 @@ actions in order.</li>
 </ol>
 <p><code>DO_NOTHING</code> actions are skipped. <code>SWITCH_INPUT</code> actions call
 <code>DisplayService.switch_input(display_id, input_id)</code>. A failed switch is logged
-and recorded as a failed <code>action</code> event; remaining actions continue.</p>
+and recorded as a failed <code>action</code> event; a successful switch is recorded as a
+successful <code>action</code> event. Remaining actions continue after a failure.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="activity-methods">Activity methods<a href="#activity-methods" class="hash-link" aria-label="Direct link to Activity methods" title="Direct link to Activity methods" translate="no">​</a></h2>
 <ul>
 <li class=""><code>get_activity_history(days=30)</code> delegates to <code>ActivityRepository.load</code>.</li>

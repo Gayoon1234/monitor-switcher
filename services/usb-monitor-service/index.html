@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">UsbMonitorService | Monitor Switcher</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://gayoon1234.github.io/monitor-switcher/services/usb-monitor-service"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="UsbMonitorService | Monitor Switcher"><meta data-rh="true" name="description" content="UsbMonitorService polls a UsbDeviceMonitor and emits"><meta data-rh="true" property="og:description" content="UsbMonitorService polls a UsbDeviceMonitor and emits"><link data-rh="true" rel="canonical" href="https://gayoon1234.github.io/monitor-switcher/services/usb-monitor-service"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/services/usb-monitor-service" hreflang="en"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/services/usb-monitor-service" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"UsbMonitorService","item":"https://gayoon1234.github.io/monitor-switcher/services/usb-monitor-service"}]}</script><link rel="stylesheet" href="/monitor-switcher/assets/css/styles.9272167e.css">
-<script src="/monitor-switcher/assets/js/runtime~main.2423571e.js" defer="defer"></script>
+<script src="/monitor-switcher/assets/js/runtime~main.4af94ef3.js" defer="defer"></script>
 <script src="/monitor-switcher/assets/js/main.55419a7a.js" defer="defer"></script>
 </head>
 <body>
@@ -22,8 +22,12 @@ When omitted, it tracks all currently connected device IDs.</p>
 <li class=""><code>start(interval_ms=500)</code> reads the initial state, then starts polling at the
 given interval. The initial read establishes a baseline; it does not emit
 events for devices already connected.</li>
+<li class=""><code>set_interval(interval_ms)</code> changes the polling interval immediately.</li>
 <li class=""><code>stop()</code> stops the timer.</li>
 </ul>
+<p>The application exposes the monitor enabled state and interval in Settings.
+Both values are persisted under <code>settings</code> in <code>config.json</code>; monitoring is
+enabled by default with a 500 ms interval.</p>
 <p>The <code>device_event</code> signal emits a <code>DeviceEvent</code> with the device ID and either
 <code>CONNECTED</code> or <code>DISCONNECTED</code>. In all-device mode, additions and removals are
 emitted in sorted device-ID order for each poll.</p>

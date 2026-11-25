@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">Technical implementation | Monitor Switcher</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://gayoon1234.github.io/monitor-switcher/technical-implementation"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Technical implementation | Monitor Switcher"><meta data-rh="true" name="description" content="This document describes the architecture of Monitor Switcher, including the main data models, hardware integration, persistence layer, event flow, and UI structure."><meta data-rh="true" property="og:description" content="This document describes the architecture of Monitor Switcher, including the main data models, hardware integration, persistence layer, event flow, and UI structure."><link data-rh="true" rel="canonical" href="https://gayoon1234.github.io/monitor-switcher/technical-implementation"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/technical-implementation" hreflang="en"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/technical-implementation" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Technical implementation","item":"https://gayoon1234.github.io/monitor-switcher/technical-implementation"}]}</script><link rel="stylesheet" href="/monitor-switcher/assets/css/styles.9272167e.css">
-<script src="/monitor-switcher/assets/js/runtime~main.2423571e.js" defer="defer"></script>
+<script src="/monitor-switcher/assets/js/runtime~main.4af94ef3.js" defer="defer"></script>
 <script src="/monitor-switcher/assets/js/main.55419a7a.js" defer="defer"></script>
 </head>
 <body>
@@ -206,7 +206,10 @@
 <li class=""><code>add_device()</code>, <code>update_device()</code>, <code>remove_device()</code></li>
 </ul>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="63-usbmonitorservice">6.3 UsbMonitorService<a href="#63-usbmonitorservice" class="hash-link" aria-label="Direct link to 6.3 UsbMonitorService" title="Direct link to 6.3 UsbMonitorService" translate="no">​</a></h3>
-<p><code>UsbMonitorService</code> in <code>app/services/usb_monitor_service.py</code> polls the live USB device list on a timer (default 500 ms) and compares the current state to the previous state.</p>
+<p><code>UsbMonitorService</code> in <code>app/services/usb_monitor_service.py</code> polls the live
+USB device list on a timer (default 500 ms) and compares the current state to
+the previous state. Its enabled state and interval can be changed from Settings
+and are persisted in the <code>settings</code> object in <code>config.json</code>.</p>
 <p>When the state changes, it emits a <code>DeviceEvent</code> with either:</p>
 <ul>
 <li class=""><code>connected</code></li>
@@ -222,7 +225,7 @@
 <li class="">match by <code>device_id</code></li>
 <li class="">match by connected/disconnected event type</li>
 <li class="">call <code>DisplayService.switch_input()</code> for each action</li>
-<li class="">log activity entries for both trigger events and action outcomes</li>
+<li class="">log automation-trigger and action outcomes; raw device events are not stored</li>
 </ul>
 <p>The service also exposes <code>get_activity_history()</code> and <code>clear_activity_history()</code> for the Activity page.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="65-themeservice">6.5 ThemeService<a href="#65-themeservice" class="hash-link" aria-label="Direct link to 6.5 ThemeService" title="Direct link to 6.5 ThemeService" translate="no">​</a></h3>
