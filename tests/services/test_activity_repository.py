@@ -1,3 +1,4 @@
+import sqlite3
 from datetime import datetime
 from datetime import timedelta
 
@@ -96,8 +97,8 @@ def test_events_persist_across_repository_instances(tmp_path):
     database_path = tmp_path / "activity.db"
 
     event = create_event(
-        event_type="device_event",
-        message="Device connected",
+        event_type="automation_triggered",
+        message="Automation triggered: Test",
     )
 
     first_repository = ActivityRepository(database_path)
@@ -110,6 +111,32 @@ def test_events_persist_across_repository_instances(tmp_path):
         assert second_repository.load() == [event]
     finally:
         second_repository.close()
+
+
+def test_load_ignores_legacy_device_events_without_deleting_them(tmp_path):
+    database_path = tmp_path / "activity.db"
+    repository = ActivityRepository(database_path)
+    legacy_event = create_event(
+        event_type="device_event",
+        message="Device connected",
+    )
+    automation_event = create_event(
+        event_type="automation_triggered",
+        message="Automation triggered: Test",
+    )
+
+    try:
+        repository.append(legacy_event)
+        repository.append(automation_event)
+
+        assert repository.load() == [automation_event]
+        with sqlite3.connect(database_path) as connection:
+            row_count = connection.execute(
+                "SELECT COUNT(*) FROM activity_events"
+            ).fetchone()[0]
+        assert row_count == 2
+    finally:
+        repository.close()
 
 
 def test_load_filters_old_events_without_deleting_them(tmp_path):

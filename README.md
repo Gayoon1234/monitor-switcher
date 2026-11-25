@@ -119,13 +119,15 @@ The Settings page lets you:
 
 - choose the UI theme
 - filter activity history by time range
+- enable or disable USB device monitoring and set its polling interval
 - clear all saved activity logs
 
 ## Configuration files
 
 The project stores configuration in the repository root:
 
-- `config.json` stores configured USB devices, displays, and automations
+- `config.json` stores configured USB devices, displays, automations, and
+  application settings
 - `theme.json` stores the selected application theme and custom colors
 - `activity.db` stores the event log used by the Activity page
 

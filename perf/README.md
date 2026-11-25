@@ -1,0 +1,80 @@
+# UI performance probes
+
+These scripts provide repeatable measurements without changing application
+behavior or writing to the real activity database.
+
+From the repository root:
+
+```powershell
+python perf\profile_activity.py --database activity.db --days 30
+python perf\profile_activity.py --synthetic-events 5000 --days all
+python perf\benchmark_hardware.py --target all --iterations 5 --warmups 1
+python perf\measure_ui_responsiveness.py --page activity --items 500
+python perf\measure_ui_responsiveness.py --page my-devices --items 50
+python perf\measure_ui_responsiveness.py --page find-my-device --items 50
+python perf\run_ui_benchmark_matrix.py
+```
+
+`profile_activity.py` reports database load time, median Activity rendering
+time, and the most expensive Python calls in one render. The database is copied
+using SQLite's read-only backup API before it is opened by the repository.
+
+`benchmark_hardware.py` measures actual Windows USB enumeration and display
+discovery. It reports per-call timings and counts after optional warmups.
+Display timing includes monitor capability and current-input queries; it never
+switches inputs or writes application data. Run with `--target usb` or
+`--target displays` to isolate either path.
+
+`measure_ui_responsiveness.py` opens a test window populated with synthetic
+events or devices and automatically sends wheel events to its scrollable
+areas. It reports widget construction time, initial paint/snapshot processing
+time, wheel-to-processed-snapshot latency (median, p95, and maximum), and
+16 ms event-loop timer lateness including missed timer intervals. Results can
+be emitted as JSON for repeatable comparison:
+
+```powershell
+python perf\measure_ui_responsiveness.py --page find-my-device --items 50 --scroll-events 200 --json
+```
+
+The script captures a QWidget snapshot after each wheel event. These timings
+measure Qt event handling and widget rendering in-process, not physical display
+frame presentation or monitor refresh. Use the same page, item count, event
+count, and interval when comparing runs; compare multiple-run medians. Synthetic
+device counts should be kept realistic when comparing against normal use.
+
+For useful comparisons, run each scenario several times on the same machine and
+compare medians. A high render/setup time points toward Python-side widget
+construction or layout work; event-loop lateness while scrolling indicates
+that the UI thread is missing scheduled timer intervals. Neither measurement
+alone proves the cause, and Qt's native painting time is not fully represented
+in Python's `cProfile` output.
+
+`run_ui_benchmark_matrix.py` sequentially runs all three pages at 50, 500, and
+5,000 items, three times per scenario, with 20 automated wheel actions per
+run. It reports medians across runs, worst-case timings, and total missed
+timer intervals. Pass `--json` to include settings and raw per-run results.
+
+To run the same page tests using the configured activity history and
+read-only live Windows device/display data:
+
+```powershell
+python perf\run_ui_benchmark_matrix.py --real-data --json
+```
+
+Real-data mode uses the production page widgets and current data snapshots,
+disables page actions, does not connect USB events to automations, and does
+not write to configuration or activity data. It reports data-loading time
+separately from widget construction. On Windows, USB and display discovery
+requires access to the relevant WMI and monitor APIs.
+
+To compare the real USB monitor's periodic WMI polling with it stopped, force
+each runtime state without editing `config.json`:
+
+```powershell
+python perf\run_ui_benchmark_matrix.py --real-data --usb-monitor enabled --scroll-events 20 --interval-ms 500 --json
+python perf\run_ui_benchmark_matrix.py --real-data --usb-monitor disabled --scroll-events 20 --interval-ms 500 --json
+```
+
+In this mode the monitor runs at the configured USB polling interval, but its
+automation signal is not connected. Poll count and duration are reported so
+that UI delays can be compared with the work performed by WMI polling.

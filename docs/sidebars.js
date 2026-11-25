@@ -2,7 +2,15 @@
 const sidebars = {
   documentation: [
     'index',
-    'technical-implementation',
+    {
+      type: 'category',
+      label: 'Technical implementation',
+      link: {
+        type: 'doc',
+        id: 'technical-implementation',
+      },
+      items: ['technical-implementation/performance-testing'],
+    },
     'road-map',
     {
       type: 'category',

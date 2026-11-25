@@ -32,19 +32,6 @@ class AutomationService(QObject):
         self.activity_logging_paused = not store_activity_logs
 
     def handle_device_event(self, event: DeviceEvent) -> None:
-        self._emit_activity(
-            ActivityEvent(
-                timestamp=datetime.now(),
-                event_type="device_event",
-                message=(
-                    "Device connected"
-                    if event.event_type == DeviceEventType.CONNECTED
-                    else "Device disconnected"
-                ),
-                success=True,
-            )
-        )
-
         for automation in self.automations:
             if not self._matches_trigger(automation, event):
                 continue

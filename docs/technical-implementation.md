@@ -214,7 +214,10 @@ It exposes:
 
 ### 6.3 UsbMonitorService
 
-`UsbMonitorService` in `app/services/usb_monitor_service.py` polls the live USB device list on a timer (default 500 ms) and compares the current state to the previous state.
+`UsbMonitorService` in `app/services/usb_monitor_service.py` polls the live
+USB device list on a timer (default 500 ms) and compares the current state to
+the previous state. Its enabled state and interval can be changed from Settings
+and are persisted in the `settings` object in `config.json`.
 
 When the state changes, it emits a `DeviceEvent` with either:
 
@@ -235,7 +238,7 @@ The logic is:
 - match by `device_id`
 - match by connected/disconnected event type
 - call `DisplayService.switch_input()` for each action
-- log activity entries for both trigger events and action outcomes
+- log automation-trigger and action outcomes; raw device events are not stored
 
 The service also exposes `get_activity_history()` and `clear_activity_history()` for the Activity page.
 
