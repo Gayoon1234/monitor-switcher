@@ -10,6 +10,8 @@ This page tracks ideas for future Monitor Switcher features and improvements.
 
 Ideas ready to be considered for upcoming releases.
 
+- Give keyboard/button press options as Trigger types.
+- Redesign device cards.
 - In addition to input source, allow automations to change brightness/contrast settings as desired.
 - Explore pagination or another scalable presentation for device cards on the My Devices and Find My Device pages.
 
@@ -20,3 +22,8 @@ Ideas ready to be considered for upcoming releases.
 ## Completed
 
 Future ideas that have been implemented and released.
+
+- Pagination on activity logs
+- Setting to control whether activity logs are recorded, the period of time to show activity logs and the option to delete all activity logs.
+- Setting to turn off usb monitoring/change the usb polling rate
+- Reduce logs overall
