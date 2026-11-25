@@ -15,6 +15,8 @@ def summarize_runs(records: list[dict]) -> dict:
         raise RuntimeError("Item counts changed between benchmark repeats.")
     if len({json.dumps(record["source_counts"], sort_keys=True) for record in records}) != 1:
         raise RuntimeError("Real data counts changed between benchmark repeats.")
+    if len({record["usb_monitor_enabled"] for record in records}) != 1:
+        raise RuntimeError("USB monitor state changed between benchmark repeats.")
 
     wheel_medians = [
         record["wheel_to_processed_snapshot"]["median_ms"]
@@ -37,6 +39,7 @@ def summarize_runs(records: list[dict]) -> dict:
         "items": records[0]["items"],
         "runs": len(records),
         "data_source": records[0]["data_source"],
+        "usb_monitor_enabled": records[0]["usb_monitor_enabled"],
         "source_counts": records[0]["source_counts"],
         "data_loading_median_ms": statistics.median(
             record["data_loading_ms"] for record in records
@@ -71,6 +74,35 @@ def summarize_runs(records: list[dict]) -> dict:
         "missed_intervals_total": sum(
             record["event_loop_missed_intervals"] for record in records
         ),
+        "usb_monitor_startup_median_ms": statistics.median(
+            record["usb_monitor_startup_ms"] for record in records
+        ),
+        "usb_monitor_poll_count_median": statistics.median(
+            record["usb_monitor_poll_count"] for record in records
+        ),
+        "usb_monitor_poll_duration_median_ms": (
+            statistics.median(
+                record["usb_monitor_poll_duration_ms"]["median_ms"]
+                for record in records
+                if record["usb_monitor_poll_duration_ms"]["median_ms"]
+                is not None
+            )
+            if any(
+                record["usb_monitor_poll_duration_ms"]["median_ms"]
+                is not None
+                for record in records
+            )
+            else None
+        ),
+        "usb_monitor_poll_duration_max_ms": max(
+            (
+                record["usb_monitor_poll_duration_ms"]["max_ms"]
+                for record in records
+                if record["usb_monitor_poll_duration_ms"]["max_ms"]
+                is not None
+            ),
+            default=None,
+        ),
     }
 
 
@@ -78,14 +110,21 @@ def run_scenario(
     page: str,
     items: int | None,
     real_data: bool,
+    usb_monitor: str,
     repeats: int,
     scroll_events: int,
     interval_ms: int,
 ) -> list[dict]:
     records = []
     for run in range(1, repeats + 1):
+        monitor_description = (
+            f", USB monitor {usb_monitor}"
+            if real_data
+            else ""
+        )
         print(
-            f"Running {page}, {items} items, run {run}/{repeats}",
+            f"Running {page}, {items} items{monitor_description}, "
+            f"run {run}/{repeats}",
             file=sys.stderr,
             flush=True,
         )
@@ -102,6 +141,7 @@ def run_scenario(
         ]
         if real_data:
             command.append("--real-data")
+            command.extend(("--usb-monitor", usb_monitor))
         else:
             command.extend(("--items", str(items)))
         completed = subprocess.run(
@@ -161,6 +201,15 @@ def main() -> None:
         help="use real local activity/device data instead of synthetic tiers",
     )
     parser.add_argument(
+        "--usb-monitor",
+        choices=("config", "enabled", "disabled"),
+        default="config",
+        help=(
+            "USB monitor state for real-data runs: use config.json, force "
+            "enabled, or force disabled (default: config)"
+        ),
+    )
+    parser.add_argument(
         "--repeats",
         type=int,
         default=3,
@@ -192,6 +241,8 @@ def main() -> None:
         parser.error("--interval-ms must be positive")
     if any(items <= 0 for items in args.items):
         parser.error("all --items values must be positive")
+    if not args.real_data and args.usb_monitor != "config":
+        parser.error("--usb-monitor overrides require --real-data")
 
     all_records = []
     summaries = []
@@ -202,6 +253,7 @@ def main() -> None:
                 page,
                 items,
                 args.real_data,
+                args.usb_monitor,
                 args.repeats,
                 args.scroll_events,
                 args.interval_ms,
@@ -214,6 +266,7 @@ def main() -> None:
             "pages": args.pages,
             "items": None if args.real_data else args.items,
             "real_data": args.real_data,
+            "usb_monitor": args.usb_monitor,
             "repeats": args.repeats,
             "scroll_events": args.scroll_events,
             "interval_ms": args.interval_ms,
@@ -227,9 +280,11 @@ def main() -> None:
     else:
         print("Median columns aggregate runs; max columns are worst values.")
         print(
-            "Page,Data,Items,Data load median ms,Construction median ms,"
-            "Initial median ms,Wheel median ms,Wheel p95 median ms,"
-            "Wheel max worst ms,Timer max worst ms,Missed intervals total"
+            "Page,Data,Monitor,Items,Data load median ms,Monitor startup "
+            "median ms,Polls/run median,Poll median ms,Poll max ms,"
+            "Construction median ms,Initial median ms,Wheel median ms,"
+            "Wheel p95 median ms,Wheel max worst ms,Timer max worst ms,"
+            "Missed intervals total"
         )
         for summary in summaries:
             def format_ms(value):
@@ -237,8 +292,13 @@ def main() -> None:
 
             print(
                 f"{summary['page']},{summary['data_source']},"
+                f"{summary['usb_monitor_enabled']},"
                 f"{summary['items']},"
                 f"{summary['data_loading_median_ms']:.2f},"
+                f"{summary['usb_monitor_startup_median_ms']:.2f},"
+                f"{summary['usb_monitor_poll_count_median']},"
+                f"{format_ms(summary['usb_monitor_poll_duration_median_ms'])},"
+                f"{format_ms(summary['usb_monitor_poll_duration_max_ms'])},"
                 f"{summary['construction_median_ms']:.2f},"
                 f"{summary['initial_median_ms']:.2f},"
                 f"{format_ms(summary['wheel_median_ms'])},"

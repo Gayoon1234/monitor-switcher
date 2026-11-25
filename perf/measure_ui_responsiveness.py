@@ -118,6 +118,25 @@ class ReadOnlyDisplayService:
         raise RuntimeError("Display switching is disabled in the benchmark.")
 
 
+class CountingUsbDeviceMonitor:
+    def __init__(self, device_monitor):
+        self.device_monitor = device_monitor
+        self.reset()
+
+    def reset(self) -> None:
+        self.poll_durations_ms: list[float] = []
+        self.poll_device_counts: list[int] = []
+
+    def get_devices(self) -> list[UsbDevice]:
+        start = perf_counter()
+        devices = self.device_monitor.get_devices()
+        self.poll_durations_ms.append(
+            (perf_counter() - start) * 1000
+        )
+        self.poll_device_counts.append(len(devices))
+        return devices
+
+
 class EventLoopMonitor(QObject):
     def __init__(self, interval_ms: int = 16, parent=None):
         super().__init__(parent)
@@ -199,6 +218,31 @@ def read_activity_days(config_path: Path) -> int | None:
     return days
 
 
+def read_usb_monitor_settings(config_path: Path) -> tuple[bool, int]:
+    if not config_path.is_file():
+        return True, 500
+
+    with config_path.open("r", encoding="utf-8") as file:
+        config = json.load(file)
+
+    settings = config.get("settings", {})
+    if not isinstance(settings, dict):
+        raise ValueError("Application settings must be a JSON object.")
+
+    enabled = settings.get("usb_monitor_enabled", True)
+    if not isinstance(enabled, bool):
+        raise ValueError("USB monitor enabled setting must be a boolean.")
+
+    interval_ms = settings.get("usb_monitor_interval_ms", 500)
+    if (
+        isinstance(interval_ms, bool)
+        or not isinstance(interval_ms, int)
+        or interval_ms <= 0
+    ):
+        raise ValueError("USB monitor interval must be a positive integer.")
+    return enabled, interval_ms
+
+
 def load_benchmark_data(
     page_name: str,
     count: int,
@@ -209,6 +253,9 @@ def load_benchmark_data(
     activity_days = None
     display_service = None
     usb_service = None
+    usb_device_monitor = None
+    configured_usb_monitor_enabled = None
+    usb_monitor_interval_ms = None
     source_counts = {
         "activity_events": None,
         "connected_usb_devices": None,
@@ -233,6 +280,12 @@ def load_benchmark_data(
         if sys.platform != "win32":
             raise RuntimeError("--real-data requires Windows.")
 
+        configured_usb_monitor_enabled, usb_monitor_interval_ms = (
+            read_usb_monitor_settings(ROOT / "config.json")
+        )
+        from app.hardware.windows_usb import WindowsUsbDeviceMonitor
+
+        usb_device_monitor = WindowsUsbDeviceMonitor()
         if page_name == "activity":
             from perf.profile_activity import load_history_snapshot
 
@@ -243,11 +296,9 @@ def load_benchmark_data(
             )
             source_counts["activity_events"] = len(activity_history)
         else:
-            from app.hardware.windows_usb import WindowsUsbDeviceMonitor
-
             repository = ConfigRepository(str(ROOT / "config.json"))
             real_usb_service = UsbService(
-                WindowsUsbDeviceMonitor(),
+                usb_device_monitor,
                 repository,
             )
             connected_devices = real_usb_service.get_devices()
@@ -287,9 +338,12 @@ def load_benchmark_data(
             activity_days,
             display_service,
             usb_service,
+            usb_device_monitor,
             item_count,
             source_counts,
             (perf_counter() - load_start) * 1000,
+            configured_usb_monitor_enabled,
+            usb_monitor_interval_ms,
         )
 
     return (
@@ -297,9 +351,12 @@ def load_benchmark_data(
         activity_days,
         display_service,
         usb_service,
+        usb_device_monitor,
         count,
         source_counts,
         (perf_counter() - load_start) * 1000,
+        configured_usb_monitor_enabled,
+        usb_monitor_interval_ms,
     )
 
 
@@ -416,6 +473,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--usb-monitor",
+        choices=("config", "enabled", "disabled"),
+        default="config",
+        help=(
+            "USB monitor state for real-data runs: use config.json, force "
+            "enabled, or force disabled (default: config)"
+        ),
+    )
+    parser.add_argument(
         "--scroll-events",
         type=int,
         default=200,
@@ -435,6 +501,8 @@ def main() -> None:
     args = parser.parse_args()
     if not args.real_data and args.items <= 0:
         parser.error("--items must be positive")
+    if not args.real_data and args.usb_monitor != "config":
+        parser.error("--usb-monitor overrides require --real-data")
     if args.scroll_events <= 0:
         parser.error("--scroll-events must be positive")
     if args.interval_ms <= 0:
@@ -464,10 +532,20 @@ def main() -> None:
         activity_days,
         display_service,
         usb_service,
+        usb_device_monitor,
         item_count,
         source_counts,
         data_loading_ms,
+        configured_usb_monitor_enabled,
+        usb_monitor_interval_ms,
     ) = load_benchmark_data(args.page, args.items, args.real_data)
+    if args.real_data:
+        if args.usb_monitor == "config":
+            usb_monitor_enabled = configured_usb_monitor_enabled
+        else:
+            usb_monitor_enabled = args.usb_monitor == "enabled"
+    else:
+        usb_monitor_enabled = False
     setup_start = perf_counter()
     page = build_page(
         args.page,
@@ -493,11 +571,32 @@ def main() -> None:
     targets = find_scroll_targets(page)
 
     monitor = EventLoopMonitor(parent=window)
+    usb_monitor_service = None
+    usb_monitor_proxy = None
+    usb_monitor_startup_ms = 0.0
+    if args.real_data and usb_monitor_enabled:
+        from app.services.usb_monitor_service import UsbMonitorService
+
+        usb_monitor_proxy = CountingUsbDeviceMonitor(usb_device_monitor)
+        usb_monitor_service = UsbMonitorService(usb_monitor_proxy)
+        usb_monitor_proxy.reset()
+        start = perf_counter()
+        usb_monitor_service.start(usb_monitor_interval_ms)
+        usb_monitor_startup_ms = (perf_counter() - start) * 1000
+
     action_times_ms = []
     changed_actions = 0
     action_index = 0
     action_timer = QTimer(window)
     action_timer.setSingleShot(True)
+    finish_timer = QTimer(window)
+    finish_timer.setSingleShot(True)
+
+    def finish() -> None:
+        monitor.stop()
+        if usb_monitor_service is not None:
+            usb_monitor_service.stop()
+        window.close()
 
     def perform_scroll() -> None:
         nonlocal action_index, changed_actions
@@ -512,8 +611,7 @@ def main() -> None:
         action_index += 1
 
         if action_index == args.scroll_events:
-            monitor.stop()
-            window.close()
+            finish()
         else:
             action_timer.start(args.interval_ms)
 
@@ -522,8 +620,24 @@ def main() -> None:
         action_timer.timeout.connect(perform_scroll)
         action_timer.start(0)
         app.exec()
+    elif args.real_data:
+        monitor.start()
+        finish_timer.timeout.connect(finish)
+        finish_timer.start(args.scroll_events * args.interval_ms)
+        app.exec()
     else:
         window.close()
+
+    usb_poll_times = (
+        usb_monitor_proxy.poll_durations_ms
+        if usb_monitor_proxy is not None
+        else []
+    )
+    usb_poll_device_counts = (
+        usb_monitor_proxy.poll_device_counts
+        if usb_monitor_proxy is not None
+        else []
+    )
 
     result = {
         "environment": {
@@ -542,6 +656,15 @@ def main() -> None:
         "source_counts": source_counts,
         "activity_days": activity_days,
         "data_loading_ms": data_loading_ms,
+        "usb_monitor_configured_enabled": configured_usb_monitor_enabled,
+        "usb_monitor_enabled": usb_monitor_enabled,
+        "usb_monitor_interval_ms": (
+            usb_monitor_interval_ms if usb_monitor_enabled else None
+        ),
+        "usb_monitor_startup_ms": usb_monitor_startup_ms,
+        "usb_monitor_poll_count": len(usb_poll_times),
+        "usb_monitor_poll_device_counts": usb_poll_device_counts,
+        "usb_monitor_poll_duration_ms": summarize(usb_poll_times),
         "scroll_targets": [target.name for target in targets],
         "requested_scroll_events": args.scroll_events,
         "scroll_interval_ms": args.interval_ms,

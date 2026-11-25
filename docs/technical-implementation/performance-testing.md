@@ -13,8 +13,8 @@ the 500 ms poll calls synchronous Windows device enumeration.
 
 ## Data/Results
 
-Measurements were collected on 22 and 24 November 2026 using synthetic UI data,
-configured activity history, and live Windows device/display discovery.
+Measurements were collected on 22, 24, and 25 November 2026 using synthetic UI
+data, configured activity history, and live Windows device/display discovery.
 
 `profile_activity.py` copies the activity database to a temporary snapshot,
 times history loading/decoding, then measures repeated `set_events()` rendering.
@@ -26,11 +26,15 @@ data discovery are timed separately from widget construction. Real-data mode
 reads the configured activity period and a read-only database snapshot, USB
 devices through the Windows monitor, and displays through read-only discovery.
 Page actions and display selectors are disabled; the benchmark does not start
-the app's automation monitor or write to configuration, activity data, or
-display inputs. It records wheel-to-processed-widget-snapshot latency and
-lateness for a 16 ms Qt timer, including missed timer intervals. Snapshot
-latency includes event handling, event processing, and `QWidget.grab()`; it is
-not physical display frame presentation or a direct frame-rate measure.
+`main.py`, connect USB events to automations, or write to configuration,
+activity data, or display inputs. In real-data mode, `--usb-monitor` selects
+the configured monitor state or forces it on/off without changing config. When
+enabled, the production `UsbMonitorService` polls on the Qt main thread, with
+no automation receiver attached. The probe records wheel-to-processed-widget-
+snapshot latency and lateness for a 16 ms Qt timer, including missed timer
+intervals. Snapshot latency includes event handling, event processing, and
+`QWidget.grab()`; it is not physical display frame presentation or a direct
+frame-rate measure.
 
 Run from the repository root:
 
@@ -40,6 +44,8 @@ py perf\benchmark_hardware.py --target usb --iterations 5 --warmups 1
 py perf\benchmark_hardware.py --target displays --iterations 3 --warmups 1
 py perf\measure_ui_responsiveness.py --page find-my-device --items 50 --scroll-events 200 --json
 py perf\run_ui_benchmark_matrix.py --real-data --json
+py perf\run_ui_benchmark_matrix.py --real-data --usb-monitor enabled --scroll-events 20 --interval-ms 500 --json
+py perf\run_ui_benchmark_matrix.py --real-data --usb-monitor disabled --scroll-events 20 --interval-ms 500 --json
 ```
 
 `benchmark_hardware.py` separately times live USB enumeration and display
@@ -102,18 +108,20 @@ across all three.
 
 ### Read-only real-data comparison
 
-Run three real-data repetitions per page with:
+Run three real-data repetitions per page with periodic monitoring disabled,
+to isolate page loading and rendering:
 
 ```powershell
-py perf\run_ui_benchmark_matrix.py --real-data --json
+py perf\run_ui_benchmark_matrix.py --real-data --usb-monitor disabled --json
 ```
 
 This uses the production page widgets with read-only snapshots from the
 configured activity database, USB WMI enumeration, and display discovery.
 Buttons and input selectors are disabled. The benchmark does not start
-`main.py`, its USB automation monitor, or any display-switch actions. Item
-counts remained stable across repeats. Median columns are medians across the
-three runs; maximum columns are worst values across the runs. Times are
+`main.py`, connect USB events to automations, or perform display-switch
+actions. Periodic USB monitoring was explicitly disabled for this baseline.
+Item counts remained stable across repeats. Median columns are medians across
+the three runs; maximum columns are worst values across the runs. Times are
 milliseconds.
 
 | Page | Real data shown | Data load median (ms) | Construction median (ms) | Initial paint/snapshot median (ms) | Wheel snapshot median (ms) | Wheel snapshot p95 (ms) | Wheel snapshot max (ms) | Timer max lateness (ms) | Missed 16 ms intervals |
@@ -123,9 +131,10 @@ milliseconds.
 | Find My Device | 22 connected USB devices; 2 saved devices | 476.92 | 72.19 | 20.02 | 6.37 | 8.20 | 17.10 | 16.26 | 1 |
 
 The My Devices run had no scrollable range with two saved cards, so it has no
-wheel or timer samples. Its approximately 3.96 s data-loading time includes
-live device/display discovery and is separate from the 34 ms widget
-construction time.
+wheel samples. Its approximately 3.96 s data-loading time includes live
+device/display discovery and is separate from the 34 ms widget construction
+time. This earlier real-data comparison did not run periodic USB monitoring;
+the controlled comparison below measures its effect separately.
 
 Synthetic comparisons at the same item counts were also run three times.
 At 306 Activity events, synthetic versus real widget construction was
@@ -133,6 +142,60 @@ At 306 Activity events, synthetic versus real widget construction was
 Find My Device cards, construction was 54.32 ms versus 72.19 ms, with wheel
 p95 of 9.83 ms versus 8.20 ms. My Devices at two saved cards had no scroll
 range in either case.
+
+### Real-data USB monitor on/off comparison
+
+The current config sets `usb_monitor_enabled` to `true` with a 500 ms polling
+interval. To compare both runtime states without modifying config, the
+benchmark was run three times per page/state with 20 automated wheel actions
+spaced 500 ms apart (about 10 seconds per run):
+
+```powershell
+py perf\run_ui_benchmark_matrix.py --real-data --usb-monitor enabled --scroll-events 20 --interval-ms 500 --json
+py perf\run_ui_benchmark_matrix.py --real-data --usb-monitor disabled --scroll-events 20 --interval-ms 500 --json
+```
+
+In enabled runs, the production USB monitor took an initial device snapshot and
+continued polling via WMI on the Qt main thread. The event signal was not
+connected to the automation service, so no automation or display action could
+run. Disabled runs did not start the monitor or poll. `config.json` was not
+changed. Current data was 48 Activity events (last 7 days), 22 connected USB
+devices, 2 saved devices, and 2 displays. My Devices had no scrollable range
+with two saved cards; it was measured idle for the same 10-second duration.
+
+Median values are across the three runs; maxima are the worst observed per
+state; missed intervals are totals. Times are milliseconds.
+
+| Page | Monitor | Data load median | Construction median | Initial paint median | Wheel median | Wheel p95 | Wheel max | Timer max lateness | Missed 16 ms intervals |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Activity (48 events) | On | 77.96 | 31.83 | 19.67 | 5.68 | 7.31 | 8.52 | 448.79 | 1,450 |
+| Activity (48 events) | Off | 76.20 | 33.62 | 19.45 | 8.03 | 9.83 | 11.94 | 7.43 | 0 |
+| My Devices (2 saved cards) | On | 3,718.14 | 30.88 | 11.30 | n/a | n/a | n/a | 459.36 | 1,440 |
+| My Devices (2 saved cards) | Off | 3,814.43 | 32.17 | 12.19 | n/a | n/a | n/a | 1.76 | 0 |
+| Find My Device (22 USB devices) | On | 472.49 | 72.46 | 20.51 | 5.71 | 10.34 | 436.18 | 440.55 | 1,485 |
+| Find My Device (22 USB devices) | Off | 484.79 | 73.35 | 20.23 | 8.08 | 10.68 | 13.21 | 8.84 | 0 |
+
+| Page | Monitor | Polls/run median | Poll duration median | Poll duration max | Monitor-start snapshot median |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Activity | On | 20 | 422.07 | 464.54 | 451.48 |
+| My Devices | On | 20 | 431.23 | 468.99 | 451.76 |
+| Find My Device | On | 20 | 427.97 | 456.46 | 446.11 |
+| All pages | Off | 0 | n/a | n/a | 0 |
+
+The monitor's roughly 422–431 ms median WMI call blocks the UI thread for most
+of each 500 ms polling interval. With monitoring on, the timer recorded a
+worst lateness of 441–459 ms and about 480 missed 16 ms deadlines per 10-second
+run. With monitoring off, no timer intervals were missed and worst lateness
+was under 9 ms. Find My Device's worst wheel-to-snapshot latency fell from
+436 ms to 13 ms; median and p95 wheel response were similar, so the main
+measured benefit is eliminating the severe long-tail stalls, not a consistent
+reduction in every scroll measurement.
+
+Widget construction and page data-loading times were essentially unchanged.
+For example, My Devices data loading remained about 3.7–3.8 seconds because
+its initial display discovery is still performed even when periodic USB
+monitoring is disabled. Thus the setting improves responsiveness during
+background monitoring but does not fix slow initial hardware discovery.
 
 The totals and worst-case timings show occasional long UI-thread stalls as
 item counts rise, particularly at 5,000 items. The two-device Find My Device
@@ -188,10 +251,14 @@ delivered timer callbacks.
 - Data loading is a separate concern: My Devices real-data discovery took
   about 3.96 s, compared with about 34 ms for widget construction. Profile
   hardware discovery separately before attributing that delay to UI rendering.
-- Hardware profiling measured USB enumeration at a 395 ms median. The app polls
-  every 500 ms on the Qt main thread, so each synchronous query occupies about
-  79% of that interval and is a strong candidate cause of recurring UI stalls.
+- The controlled monitor comparison confirms that synchronous USB polling
+  blocks the Qt main thread: WMI enumeration took about 422–431 ms at a 500 ms
+  interval, with about 480 missed 16 ms deadlines per 10-second run. Disabling
+  the monitor eliminated those missed deadlines and reduced the worst
+  Find My Device scroll snapshot from 436 ms to 13 ms.
   Display discovery took about 3.58 s for two displays, affecting startup/data
   loading rather than each USB polling cycle.
+- Disabling USB monitoring does not materially change widget construction or
+  the slow initial My Devices discovery; those are separate costs.
 - These are QWidget snapshot and event-loop measurements, not physical display
   frame times. They do not prove frame-rate or compositor behavior.

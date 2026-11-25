@@ -62,7 +62,19 @@ python perf\run_ui_benchmark_matrix.py --real-data --json
 ```
 
 Real-data mode uses the production page widgets and current data snapshots,
-disables page actions, does not start USB automation monitoring, and does not
-write to configuration or activity data. It reports data-loading time
+disables page actions, does not connect USB events to automations, and does
+not write to configuration or activity data. It reports data-loading time
 separately from widget construction. On Windows, USB and display discovery
 requires access to the relevant WMI and monitor APIs.
+
+To compare the real USB monitor's periodic WMI polling with it stopped, force
+each runtime state without editing `config.json`:
+
+```powershell
+python perf\run_ui_benchmark_matrix.py --real-data --usb-monitor enabled --scroll-events 20 --interval-ms 500 --json
+python perf\run_ui_benchmark_matrix.py --real-data --usb-monitor disabled --scroll-events 20 --interval-ms 500 --json
+```
+
+In this mode the monitor runs at the configured USB polling interval, but its
+automation signal is not connected. Poll count and duration are reported so
+that UI delays can be compared with the work performed by WMI polling.
