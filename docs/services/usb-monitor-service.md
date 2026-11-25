@@ -18,7 +18,12 @@ When omitted, it tracks all currently connected device IDs.
 - `start(interval_ms=500)` reads the initial state, then starts polling at the
   given interval. The initial read establishes a baseline; it does not emit
   events for devices already connected.
+- `set_interval(interval_ms)` changes the polling interval immediately.
 - `stop()` stops the timer.
+
+The application exposes the monitor enabled state and interval in Settings.
+Both values are persisted under `settings` in `config.json`; monitoring is
+enabled by default with a 500 ms interval.
 
 The `device_event` signal emits a `DeviceEvent` with the device ID and either
 `CONNECTED` or `DISCONNECTED`. In all-device mode, additions and removals are

@@ -23,6 +23,7 @@ class MainWindow(QMainWindow):
         repository,
         automation_service,
         theme_service=None,
+        usb_monitor_service=None,
     ):
         super().__init__()
 
@@ -34,6 +35,7 @@ class MainWindow(QMainWindow):
         self.repository = repository
         self.automation_service = automation_service
         self.theme_service = theme_service
+        self.usb_monitor_service = usb_monitor_service
         
         self._setup_ui()
 
@@ -97,6 +99,12 @@ class MainWindow(QMainWindow):
                 activity_logging_paused=(
                     self.automation_service.activity_logging_paused
                 ),
+                usb_monitor_enabled=(
+                    self.repository.load_usb_monitor_enabled()
+                ),
+                usb_monitor_interval_ms=(
+                    self.repository.load_usb_monitor_interval_ms()
+                ),
             )
             self.settings_page.theme_changed.connect(
                 self._set_active_theme
@@ -109,6 +117,12 @@ class MainWindow(QMainWindow):
             )
             self.settings_page.activity_logging_paused_changed.connect(
                 self._set_activity_logging_paused
+            )
+            self.settings_page.usb_monitor_enabled_changed.connect(
+                self._set_usb_monitor_enabled
+            )
+            self.settings_page.usb_monitor_interval_changed.connect(
+                self._set_usb_monitor_interval
             )
             self.pages.addWidget(self.settings_page)
         else:
@@ -147,6 +161,23 @@ class MainWindow(QMainWindow):
     def _set_activity_logging_paused(self, paused):
         self.repository.save_store_activity_logs(not paused)
         self.automation_service.set_activity_logging_paused(paused)
+
+    def _set_usb_monitor_enabled(self, enabled):
+        self.repository.save_usb_monitor_enabled(enabled)
+        if self.usb_monitor_service is None:
+            return
+
+        if enabled:
+            self.usb_monitor_service.start(
+                self.repository.load_usb_monitor_interval_ms()
+            )
+        else:
+            self.usb_monitor_service.stop()
+
+    def _set_usb_monitor_interval(self, interval_ms):
+        self.repository.save_usb_monitor_interval_ms(interval_ms)
+        if self.usb_monitor_service is not None:
+            self.usb_monitor_service.set_interval(interval_ms)
 
     def _clear_activity_history(self):
         self.automation_service.clear_activity_history()

@@ -81,7 +81,10 @@ usb_monitor_service.device_event.connect(
     automation_service.handle_device_event
 )
 
-usb_monitor_service.start()
+usb_monitor_enabled = repository.load_usb_monitor_enabled()
+usb_monitor_interval_ms = repository.load_usb_monitor_interval_ms()
+if usb_monitor_enabled:
+    usb_monitor_service.start(usb_monitor_interval_ms)
 
 
 # -------------------------
@@ -93,6 +96,7 @@ window = MainWindow(
     repository=repository,
     automation_service=automation_service,
     theme_service=theme_service,
+    usb_monitor_service=usb_monitor_service,
 )
 
 window.show()

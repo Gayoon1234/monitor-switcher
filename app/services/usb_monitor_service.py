@@ -31,6 +31,7 @@ class UsbMonitorService(QObject):
         self.timer.timeout.connect(self._check_device)
 
     def start(self, interval_ms: int = 500) -> None:
+        self._validate_interval(interval_ms)
         try:
             self.previous_connected = self._current_state()
         except Exception:
@@ -44,8 +45,24 @@ class UsbMonitorService(QObject):
 
         self.timer.start(interval_ms)
 
+    def set_interval(self, interval_ms: int) -> None:
+        self._validate_interval(interval_ms)
+        self.timer.setInterval(interval_ms)
+
     def stop(self) -> None:
         self.timer.stop()
+
+    @staticmethod
+    def _validate_interval(interval_ms: int) -> None:
+        if (
+            not isinstance(interval_ms, int)
+            or isinstance(interval_ms, bool)
+            or not 1 <= interval_ms <= 2_147_483_647
+        ):
+            raise ValueError(
+                "USB monitor polling interval must be between 1 and "
+                "2147483647 milliseconds."
+            )
 
     def _current_state(self) -> bool | set[str]:
         if self.device_id is None:

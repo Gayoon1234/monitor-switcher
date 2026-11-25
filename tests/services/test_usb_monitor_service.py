@@ -149,3 +149,20 @@ def test_hardware_failure_does_not_emit_event_or_change_state(qapp):
 
     assert events == []
     assert service.previous_connected is True
+
+
+def test_polling_interval_can_be_changed_while_running(qapp):
+    service, _ = create_service()
+    service.start(500)
+
+    assert service.timer.interval() == 500
+    assert service.timer.isActive()
+
+    service.set_interval(1250)
+
+    assert service.timer.interval() == 1250
+    assert service.timer.isActive()
+
+    service.stop()
+
+    assert not service.timer.isActive()

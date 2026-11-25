@@ -89,6 +89,8 @@
     ],
     "settings": {
         "activity_days": 7,
-        "store_activity_logs": true
+        "store_activity_logs": true,
+        "usb_monitor_enabled": true,
+        "usb_monitor_interval_ms": 500
     }
 }

@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -16,6 +17,8 @@ class SettingsPage(QWidget):
     activity_days_changed = Signal(object)
     clear_activity_requested = Signal()
     activity_logging_paused_changed = Signal(bool)
+    usb_monitor_enabled_changed = Signal(bool)
+    usb_monitor_interval_changed = Signal(int)
 
     ACTIVITY_PERIODS = (
         ("Last 7 days", 7),
@@ -30,6 +33,8 @@ class SettingsPage(QWidget):
         theme_service,
         activity_days: int | None = 30,
         activity_logging_paused: bool = False,
+        usb_monitor_enabled: bool = True,
+        usb_monitor_interval_ms: int = 500,
     ):
         super().__init__()
         self.theme_service = theme_service
@@ -106,9 +111,42 @@ class SettingsPage(QWidget):
         )
 
         activity_layout.addLayout(self.activity_actions_row)
+
+        usb_monitor_section, usb_monitor_layout = self._create_section(
+            "USB device monitoring"
+        )
+        self.usb_monitor_button = QPushButton()
+        self.usb_monitor_button.setCheckable(True)
+        self.usb_monitor_button.setChecked(usb_monitor_enabled)
+        self._update_usb_monitor_button(usb_monitor_enabled)
+        self.usb_monitor_button.toggled.connect(
+            self._on_usb_monitor_toggled
+        )
+        usb_monitor_layout.addWidget(self.usb_monitor_button)
+
+        self.usb_monitor_interval_spinbox = QSpinBox()
+        self.usb_monitor_interval_spinbox.setRange(1, 2_147_483_647)
+        self.usb_monitor_interval_spinbox.setSuffix(" ms")
+        self.usb_monitor_interval_spinbox.setValue(
+            usb_monitor_interval_ms
+        )
+        self.usb_monitor_interval_spinbox.valueChanged.connect(
+            self.usb_monitor_interval_changed.emit
+        )
+        usb_monitor_interval_row = QHBoxLayout()
+        usb_monitor_interval_row.addWidget(
+            QLabel("Polling interval:")
+        )
+        usb_monitor_interval_row.addWidget(
+            self.usb_monitor_interval_spinbox,
+            1,
+        )
+        usb_monitor_layout.addLayout(usb_monitor_interval_row)
+
         layout.addWidget(title)
         layout.addWidget(theme_section)
         layout.addWidget(activity_section)
+        layout.addWidget(usb_monitor_section)
         layout.addStretch()
 
     def _create_section(self, title: str):
@@ -144,6 +182,17 @@ class SettingsPage(QWidget):
             "Click to start recording Activity Logs"
             if paused
             else "Click to pause Activity Logs"
+        )
+
+    def _on_usb_monitor_toggled(self, enabled: bool) -> None:
+        self._update_usb_monitor_button(enabled)
+        self.usb_monitor_enabled_changed.emit(enabled)
+
+    def _update_usb_monitor_button(self, enabled: bool) -> None:
+        self.usb_monitor_button.setText(
+            "Click to stop USB device monitoring"
+            if enabled
+            else "Click to start USB device monitoring"
         )
 
     def _confirm_clear_activity(self) -> None:

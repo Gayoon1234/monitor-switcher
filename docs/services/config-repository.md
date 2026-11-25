@@ -46,6 +46,13 @@ the complete configuration back to the file, preserving other properties.
 - `load_store_activity_logs()` returns whether new activity is recorded,
   defaulting to `True`.
 - `save_store_activity_logs(enabled)` persists whether activity is recorded.
+- `load_usb_monitor_enabled()` returns whether USB event monitoring is on,
+  defaulting to `True`.
+- `save_usb_monitor_enabled(enabled)` persists whether USB event monitoring
+  is on.
+- `load_usb_monitor_interval_ms()` returns the USB polling interval in
+  milliseconds, defaulting to `500`.
+- `save_usb_monitor_interval_ms(interval_ms)` persists the polling interval.
 
 These preferences are stored under the `settings` object in `config.json`.
 Legacy top-level `activity_days` values are migrated there when settings are

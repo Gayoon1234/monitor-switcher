@@ -1,6 +1,8 @@
 import json
 from dataclasses import asdict
 
+import pytest
+
 from app.models.automation import (
     Action,
     ActionType,
@@ -275,6 +277,8 @@ def test_activity_days_default_to_30_and_persist_selection(tmp_path):
     assert data["settings"] == {
         "activity_days": 7,
         "store_activity_logs": True,
+        "usb_monitor_enabled": True,
+        "usb_monitor_interval_ms": 500,
     }
     assert "activity_days" not in data
 
@@ -303,6 +307,8 @@ def test_legacy_activity_days_are_migrated_into_settings(tmp_path):
         "settings": {
             "activity_days": 7,
             "store_activity_logs": True,
+            "usb_monitor_enabled": True,
+            "usb_monitor_interval_ms": 500,
         },
     }
 
@@ -315,3 +321,28 @@ def test_store_activity_logs_default_and_persist(tmp_path):
     repository.save_store_activity_logs(False)
 
     assert ConfigRepository(path=config_path).load_store_activity_logs() is False
+
+
+def test_usb_monitor_settings_default_and_persist(tmp_path):
+    config_path = tmp_path / "config.json"
+    repository = ConfigRepository(path=config_path)
+
+    assert repository.load_usb_monitor_enabled() is True
+    assert repository.load_usb_monitor_interval_ms() == 500
+
+    repository.save_usb_monitor_enabled(False)
+    repository.save_usb_monitor_interval_ms(1250)
+    reloaded_repository = ConfigRepository(path=config_path)
+
+    assert reloaded_repository.load_usb_monitor_enabled() is False
+    assert reloaded_repository.load_usb_monitor_interval_ms() == 1250
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    assert data["settings"]["usb_monitor_enabled"] is False
+    assert data["settings"]["usb_monitor_interval_ms"] == 1250
+
+
+def test_usb_monitor_interval_rejects_non_positive_values(tmp_path):
+    repository = ConfigRepository(path=tmp_path / "config.json")
+
+    with pytest.raises(ValueError, match="polling interval"):
+        repository.save_usb_monitor_interval_ms(0)

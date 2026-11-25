@@ -42,7 +42,7 @@ def test_settings_sections_use_theme_cards(tmp_path, qapp):
 
     sections = page.findChildren(QFrame, "settingsSectionCard")
 
-    assert len(sections) == 2
+    assert len(sections) == 3
     assert "QFrame#settingsSectionCard" in service.get_stylesheet()
 
 
@@ -152,3 +152,57 @@ def test_activity_logging_pause_is_persisted(tmp_path):
 
     assert activity_service.activity_logging_paused is True
     assert repository.load_store_activity_logs() is False
+
+
+def test_usb_monitor_settings_emit_changes(tmp_path, qapp):
+    service = ThemeService(str(tmp_path / "theme.json"))
+    page = SettingsPage(service)
+    enabled_states = []
+    intervals = []
+    page.usb_monitor_enabled_changed.connect(enabled_states.append)
+    page.usb_monitor_interval_changed.connect(intervals.append)
+
+    assert page.usb_monitor_button.text() == (
+        "Click to stop USB device monitoring"
+    )
+
+    page.usb_monitor_button.click()
+    assert page.usb_monitor_button.text() == (
+        "Click to start USB device monitoring"
+    )
+    page.usb_monitor_button.click()
+    assert page.usb_monitor_button.text() == (
+        "Click to stop USB device monitoring"
+    )
+    page.usb_monitor_interval_spinbox.setValue(1000)
+
+    assert enabled_states == [False, True]
+    assert intervals == [1000]
+
+
+def test_usb_monitor_settings_update_service_and_persist(tmp_path):
+    repository = ConfigRepository(path=tmp_path / "config.json")
+    calls = []
+
+    class FakeUsbMonitorService:
+        def start(self, interval_ms):
+            calls.append(("start", interval_ms))
+
+        def stop(self):
+            calls.append(("stop",))
+
+        def set_interval(self, interval_ms):
+            calls.append(("interval", interval_ms))
+
+    window = SimpleNamespace(
+        repository=repository,
+        usb_monitor_service=FakeUsbMonitorService(),
+    )
+
+    MainWindow._set_usb_monitor_enabled(window, False)
+    MainWindow._set_usb_monitor_interval(window, 250)
+    MainWindow._set_usb_monitor_enabled(window, True)
+
+    assert calls == [("stop",), ("interval", 250), ("start", 250)]
+    assert repository.load_usb_monitor_enabled() is True
+    assert repository.load_usb_monitor_interval_ms() == 250

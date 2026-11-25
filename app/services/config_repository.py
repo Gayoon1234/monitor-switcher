@@ -180,6 +180,8 @@ class ConfigRepository:
             data.get("activity_days", 30),
         )
         normalized_settings.setdefault("store_activity_logs", True)
+        normalized_settings.setdefault("usb_monitor_enabled", True)
+        normalized_settings.setdefault("usb_monitor_interval_ms", 500)
 
         if (
             data.get("settings") != normalized_settings
@@ -208,5 +210,51 @@ class ConfigRepository:
         data = self._load()
         settings = self._load_settings()
         settings["store_activity_logs"] = enabled
+        data["settings"] = settings
+        self._save(data)
+
+    def load_usb_monitor_enabled(self) -> bool:
+        enabled = self._load_settings()["usb_monitor_enabled"]
+        if not isinstance(enabled, bool):
+            raise ValueError("USB monitor enabled setting must be a boolean.")
+        return enabled
+
+    def save_usb_monitor_enabled(self, enabled: bool) -> None:
+        if not isinstance(enabled, bool):
+            raise ValueError("USB monitor enabled setting must be a boolean.")
+
+        data = self._load()
+        settings = self._load_settings()
+        settings["usb_monitor_enabled"] = enabled
+        data["settings"] = settings
+        self._save(data)
+
+    def load_usb_monitor_interval_ms(self) -> int:
+        interval_ms = self._load_settings()["usb_monitor_interval_ms"]
+        if (
+            not isinstance(interval_ms, int)
+            or isinstance(interval_ms, bool)
+            or not 1 <= interval_ms <= 2_147_483_647
+        ):
+            raise ValueError(
+                "USB monitor polling interval must be between 1 and "
+                "2147483647 milliseconds."
+            )
+        return interval_ms
+
+    def save_usb_monitor_interval_ms(self, interval_ms: int) -> None:
+        if (
+            not isinstance(interval_ms, int)
+            or isinstance(interval_ms, bool)
+            or not 1 <= interval_ms <= 2_147_483_647
+        ):
+            raise ValueError(
+                "USB monitor polling interval must be between 1 and "
+                "2147483647 milliseconds."
+            )
+
+        data = self._load()
+        settings = self._load_settings()
+        settings["usb_monitor_interval_ms"] = interval_ms
         data["settings"] = settings
         self._save(data)
