@@ -1,5 +1,6 @@
 import logging
 
+import pythoncom
 import win32com.client
 
 from app.hardware.usb import UsbDeviceMonitor
@@ -14,32 +15,36 @@ class WindowsUsbDeviceMonitor(UsbDeviceMonitor):
     def get_devices(self) -> list[UsbDevice]:
         logger.debug("Enumerating connected USB devices")
 
-        wmi = win32com.client.GetObject("winmgmts:")
-        devices = wmi.InstancesOf("Win32_PnPEntity")
+        pythoncom.CoInitialize()
+        try:
+            wmi = win32com.client.GetObject("winmgmts:")
+            devices = wmi.InstancesOf("Win32_PnPEntity")
 
-        result = []
+            result = []
 
-        for device in devices:
-            if not device.Present:
-                continue
+            for device in devices:
+                if not device.Present:
+                    continue
 
-            device_id = device.DeviceID
-            if not device_id:
-                continue
+                device_id = device.DeviceID
+                if not device_id:
+                    continue
 
-            if not device_id.startswith("USB\\"):
-                continue
+                if not device_id.startswith("USB\\"):
+                    continue
 
-            result.append(
-                UsbDevice(
-                    windows_device_id=device_id,
-                    name=device.Name or device_id,
+                result.append(
+                    UsbDevice(
+                        windows_device_id=device_id,
+                        name=device.Name or device_id,
+                    )
                 )
+
+            logger.debug(
+                "Found %d connected USB devices",
+                len(result),
             )
 
-        logger.debug(
-            "Found %d connected USB devices",
-            len(result),
-        )
-
-        return result
+            return result
+        finally:
+            pythoncom.CoUninitialize()
