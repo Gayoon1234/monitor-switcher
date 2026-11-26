@@ -1,56 +1,35 @@
 import logging
 
-from PySide6.QtCore import QObject, Signal
-
-from app.hardware.usb import UsbDeviceMonitor
+from app.events import EventHook
 from app.models.device_event import DeviceEvent, DeviceEventType
-from app.services.usb_device_poller import UsbDevicePoller
 
 
 logger = logging.getLogger(__name__)
 
 
-class UsbMonitorService(QObject):
-
-    device_event = Signal(object)
+class UsbMonitorService:
 
     def __init__(
         self,
-        device_monitor: UsbDeviceMonitor,
         device_id: str | None = None,
     ):
-        super().__init__()
-
         self.device_id = device_id
         self.previous_connected: bool | set[str] = (
             set() if device_id is None else False
         )
         self._baseline_pending = False
+        self.device_events: EventHook[DeviceEvent] = EventHook()
 
-        self._poller = UsbDevicePoller(
-            device_monitor=device_monitor,
-            device_id=device_id,
-            parent=self,
-        )
-        self._poller.state_ready.connect(self._on_state_ready)
-        self._poller.poll_failed.connect(self._on_poll_failed)
-
-    def start(self, interval_ms: int = 500) -> None:
-        UsbDevicePoller.validate_interval(interval_ms)
+    def begin_monitoring(self) -> None:
         self._baseline_pending = True
         self.previous_connected = (
             set() if self.device_id is None else False
         )
-        self._poller.start(interval_ms)
 
-    def set_interval(self, interval_ms: int) -> None:
-        self._poller.set_interval(interval_ms)
-
-    def stop(self) -> None:
+    def stop_monitoring(self) -> None:
         self._baseline_pending = False
-        self._poller.stop()
 
-    def _on_state_ready(self, current_state: bool | set[str]) -> None:
+    def handle_state(self, current_state: bool | set[str]) -> None:
         if self._baseline_pending:
             self.previous_connected = current_state
             self._baseline_pending = False
@@ -72,7 +51,7 @@ class UsbMonitorService(QObject):
         else:
             logger.error("USB monitor returned an invalid device state")
 
-    def _on_poll_failed(self, error: Exception) -> None:
+    def handle_poll_error(self, error: Exception) -> None:
         message = (
             "Failed to initialize USB monitoring state for %s"
             if self._baseline_pending
@@ -101,7 +80,7 @@ class UsbMonitorService(QObject):
         self.previous_connected = current_ids
 
     def _emit_device_event(self, device_id: str, connected: bool) -> None:
-        self.device_event.emit(
+        self.device_events.emit(
             DeviceEvent(
                 device_id=device_id,
                 event_type=(

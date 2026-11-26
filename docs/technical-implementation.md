@@ -26,15 +26,15 @@ The startup sequence in `main.py` is roughly:
 3. Instantiate Windows-specific hardware controllers.
 4. Load configuration from `config.json` and create the display service.
 5. Create the automation service and activity repository.
-6. Start the USB polling timer.
+6. Create the Qt USB monitor adapter and start polling when enabled.
 7. Open the main window.
 
 The runtime flow is:
 
 ```text
-USB polling timer
-   -> UsbMonitorService._check_device()
-   -> emits DeviceEvent
+QtUsbMonitorAdapter (Qt timer + worker pool)
+   -> UsbMonitorService.handle_state()
+   -> publishes DeviceEvent through EventHook
    -> AutomationService.handle_device_event()
    -> matches trigger
    -> DisplayService.switch_input()
@@ -204,7 +204,10 @@ This service keeps the UI and automation logic decoupled from the raw monitor AP
 
 ### 6.2 UsbService
 
-`UsbService` in `app/services/usb_service.py` handles configured USB devices and emits a `devices_changed` signal when the saved device set changes.
+`UsbService` in `app/services/usb_service.py` handles configured USB devices
+and publishes `devices_changed` through a framework-neutral event hook when
+the saved device set changes. The Qt service-event adapter translates this
+notification for UI pages.
 
 It exposes:
 
@@ -214,12 +217,15 @@ It exposes:
 
 ### 6.3 UsbMonitorService
 
-`UsbMonitorService` in `app/services/usb_monitor_service.py` polls the live
-USB device list on a timer (default 500 ms) and compares the current state to
-the previous state. Its enabled state and interval can be changed from Settings
-and are persisted in the `settings` object in `config.json`.
+`UsbMonitorService` in `app/services/usb_monitor_service.py` compares USB
+snapshots to the previous state without depending on Qt. The
+`QtUsbMonitorAdapter` in `app/adapters/qt/usb_monitor_adapter.py` owns the Qt
+timer and worker-pool enumeration (default 500 ms). Its enabled state and
+interval can be changed from Settings and are persisted in the `settings`
+object in `config.json`.
 
-When the state changes, it emits a `DeviceEvent` with either:
+When the state changes, it publishes a `DeviceEvent` through `EventHook` with
+either:
 
 - `connected`
 - `disconnected`
@@ -228,7 +234,8 @@ This is the core trigger path for automations.
 
 ### 6.4 AutomationService
 
-`AutomationService` in `app/services/automation_service.py` is the central automation engine.
+`AutomationService` in `app/services/automation_service.py` is the central,
+framework-independent automation engine.
 
 It receives device events, checks whether any automation matches the event, and if so executes the configured actions.
 
@@ -240,7 +247,9 @@ The logic is:
 - call `DisplayService.switch_input()` for each action
 - log automation-trigger and action outcomes; raw device events are not stored
 
-The service also exposes `get_activity_history()` and `clear_activity_history()` for the Activity page.
+The service also exposes `get_activity_history()` and
+`clear_activity_history()` for the Activity page, and publishes activity
+updates through an `EventHook`.
 
 ### 6.5 ThemeService
 
@@ -267,7 +276,8 @@ The app uses PySide6 widgets organized around a main window and multiple pages.
 - Activity
 - Settings
 
-It also connects the automation service's `activity_event` signal to the activity page so new events update the view in real time.
+It uses `QtServiceEventAdapter` to translate framework-neutral service events
+into Qt signals for the Activity, My Devices, and Find My Device pages.
 
 ### 7.2 Pages
 

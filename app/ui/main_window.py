@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.adapters.qt.service_event_adapter import QtServiceEventAdapter
 from app.ui.pages.my_devices import MyDevicesPage
 from app.ui.pages.automations import AutomationsPage
 from app.ui.pages.activity import ActivityPage
@@ -23,7 +24,7 @@ class MainWindow(QMainWindow):
         repository,
         automation_service,
         theme_service=None,
-        usb_monitor_service=None,
+        usb_monitor_adapter=None,
     ):
         super().__init__()
 
@@ -35,7 +36,12 @@ class MainWindow(QMainWindow):
         self.repository = repository
         self.automation_service = automation_service
         self.theme_service = theme_service
-        self.usb_monitor_service = usb_monitor_service
+        self.usb_monitor_adapter = usb_monitor_adapter
+        self.service_event_adapter = QtServiceEventAdapter(
+            automation_service,
+            usb_service,
+            parent=self,
+        )
         
         self._setup_ui()
 
@@ -65,11 +71,15 @@ class MainWindow(QMainWindow):
             MyDevicesPage(
                 self.display_service,
                 self.usb_service,
+                self.service_event_adapter.usb_devices_changed,
             )
         )
 
         self.pages.addWidget(
-            FindMyDevicePage(self.usb_service)
+            FindMyDevicePage(
+                self.usb_service,
+                self.service_event_adapter.usb_devices_changed,
+            )
         )
         
         self.pages.addWidget(
@@ -139,9 +149,15 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(container)
 
-        self.automation_service.activity_event.connect(
+        self.service_event_adapter.activity_event.connect(
             self.activity_page.add_event
         )
+
+    def closeEvent(self, event):
+        self.service_event_adapter.close()
+        if self.usb_monitor_adapter is not None:
+            self.usb_monitor_adapter.stop()
+        super().closeEvent(event)
 
     def _set_active_theme(self, theme_name):
         self.theme_service.set_active_theme(theme_name)
@@ -164,20 +180,20 @@ class MainWindow(QMainWindow):
 
     def _set_usb_monitor_enabled(self, enabled):
         self.repository.save_usb_monitor_enabled(enabled)
-        if self.usb_monitor_service is None:
+        if self.usb_monitor_adapter is None:
             return
 
         if enabled:
-            self.usb_monitor_service.start(
+            self.usb_monitor_adapter.start(
                 self.repository.load_usb_monitor_interval_ms()
             )
         else:
-            self.usb_monitor_service.stop()
+            self.usb_monitor_adapter.stop()
 
     def _set_usb_monitor_interval(self, interval_ms):
         self.repository.save_usb_monitor_interval_ms(interval_ms)
-        if self.usb_monitor_service is not None:
-            self.usb_monitor_service.set_interval(interval_ms)
+        if self.usb_monitor_adapter is not None:
+            self.usb_monitor_adapter.set_interval(interval_ms)
 
     def _clear_activity_history(self):
         self.automation_service.clear_activity_history()

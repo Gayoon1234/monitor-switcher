@@ -14,7 +14,6 @@ from PySide6.QtCore import (
     QPointF,
     QTimer,
     Qt,
-    Signal,
     qVersion,
 )
 from PySide6.QtGui import QWheelEvent
@@ -36,8 +35,10 @@ sys.path.insert(0, str(ROOT))
 from app.models.activity_event import ActivityEvent
 from app.models.display import Display
 from app.models.usb_device import ConfiguredUsbDevice, UsbDevice
+from app.adapters.qt.usb_monitor_adapter import QtUsbMonitorAdapter
 from app.services.config_repository import ConfigRepository
 from app.services.theme_service import ThemeService
+from app.services.usb_monitor_service import UsbMonitorService
 from app.services.usb_service import UsbService
 from app.ui.pages.activity import ActivityPage
 from app.ui.pages.find_my_device import FindMyDevicePage
@@ -60,11 +61,8 @@ class FakeDisplayService:
         return None
 
 
-class FakeUsbService(QObject):
-    devices_changed = Signal()
-
+class FakeUsbService:
     def __init__(self, count: int):
-        super().__init__()
         self.devices = [
             UsbDevice(
                 windows_device_id=f"USB\\TEST{index + 1:04d}",
@@ -88,15 +86,12 @@ class FakeUsbService(QObject):
         return self.configured_devices
 
 
-class SnapshotUsbService(QObject):
-    devices_changed = Signal()
-
+class SnapshotUsbService:
     def __init__(
         self,
         devices: list[UsbDevice],
         configured_devices: list[ConfiguredUsbDevice],
     ):
-        super().__init__()
         self.devices = devices
         self.configured_devices = configured_devices
 
@@ -571,17 +566,20 @@ def main() -> None:
     targets = find_scroll_targets(page)
 
     monitor = EventLoopMonitor(parent=window)
-    usb_monitor_service = None
+    usb_monitor_adapter = None
     usb_monitor_proxy = None
     usb_monitor_startup_ms = 0.0
     if args.real_data and usb_monitor_enabled:
-        from app.services.usb_monitor_service import UsbMonitorService
-
         usb_monitor_proxy = CountingUsbDeviceMonitor(usb_device_monitor)
-        usb_monitor_service = UsbMonitorService(usb_monitor_proxy)
+        usb_monitor_service = UsbMonitorService()
+        usb_monitor_adapter = QtUsbMonitorAdapter(
+            usb_monitor_proxy,
+            usb_monitor_service,
+            parent=window,
+        )
         usb_monitor_proxy.reset()
         start = perf_counter()
-        usb_monitor_service.start(usb_monitor_interval_ms)
+        usb_monitor_adapter.start(usb_monitor_interval_ms)
         usb_monitor_startup_ms = (perf_counter() - start) * 1000
 
     action_times_ms = []
@@ -594,8 +592,8 @@ def main() -> None:
 
     def finish() -> None:
         monitor.stop()
-        if usb_monitor_service is not None:
-            usb_monitor_service.stop()
+        if usb_monitor_adapter is not None:
+            usb_monitor_adapter.stop()
         window.close()
 
     def perform_scroll() -> None:

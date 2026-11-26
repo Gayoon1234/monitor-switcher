@@ -30,8 +30,9 @@ Page actions and display selectors are disabled; the benchmark does not start
 `main.py`, connect USB events to automations, or write to configuration,
 activity data, or display inputs. In real-data mode, `--usb-monitor` selects
 the configured monitor state or forces it on/off without changing config. When
-enabled, the production `UsbMonitorService` enumerates USB devices in a worker
-thread, with no automation receiver attached. The pre-change baseline below
+enabled, the production `QtUsbMonitorAdapter` enumerates USB devices in a worker
+thread and passes snapshots to `UsbMonitorService`, with no automation receiver
+attached. The pre-change baseline below
 was collected when polling still ran on the Qt main thread. The probe records
 wheel-to-processed-widget-snapshot latency and lateness for a 16 ms Qt timer,
 including missed timer intervals. Snapshot latency includes event handling,
@@ -158,7 +159,7 @@ py perf\run_ui_benchmark_matrix.py --real-data --usb-monitor disabled --scroll-e
 ```
 
 In enabled baseline runs, the monitor took an initial device snapshot and
-continued polling via WMI on the Qt main thread. The event signal was not
+continued polling via WMI on the Qt main thread. Device events were not
 connected to the automation service, so no automation or display action could
 run. Disabled runs did not start the monitor or poll. `config.json` was not
 changed. Data at the time was 48 Activity events (last 7 days), 22 connected
@@ -207,7 +208,7 @@ case has no scrollable range and is not included in this matrix.
 After moving USB enumeration to a worker thread, the same controlled comparison
 was run three times per state on Find My Device. Each run used 22 connected USB
 devices, 20 wheel actions at 500 ms intervals, and a 500 ms monitor interval.
-The event signal remained disconnected from automations. These commands do not
+Device events remained disconnected from automations. These commands do not
 change `config.json`:
 
 ```powershell

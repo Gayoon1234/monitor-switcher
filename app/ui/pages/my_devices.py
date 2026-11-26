@@ -14,15 +14,14 @@ from app.ui.widgets.usb_device_card import UsbDeviceCard
 
 class MyDevicesPage(QWidget):
 
-    def __init__(self, display_service, usb_service):
+    def __init__(self, display_service, usb_service, devices_changed=None):
         super().__init__()
 
         self.display_service = display_service
         self.usb_service = usb_service
 
-        self.usb_service.devices_changed.connect(
-            self._refresh
-        )
+        if devices_changed is not None:
+            devices_changed.connect(self._refresh)
 
         self._setup_ui()
         self._refresh()

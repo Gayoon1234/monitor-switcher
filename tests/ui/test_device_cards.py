@@ -1,4 +1,3 @@
-from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QPushButton, QScrollArea, QSizePolicy
 
 from app.models.display import Display, DisplayInput, InputType
@@ -17,11 +16,9 @@ class DisplayServiceStub:
         return []
 
 
-class UsbServiceStub(QObject):
-    devices_changed = Signal()
+class UsbServiceStub:
 
     def __init__(self, devices=None, configured_devices=None):
-        super().__init__()
         self.devices = devices or []
         self.configured_devices = configured_devices or []
 

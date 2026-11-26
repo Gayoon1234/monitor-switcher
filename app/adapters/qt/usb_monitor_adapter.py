@@ -10,6 +10,7 @@ from PySide6.QtCore import (
 )
 
 from app.hardware.usb import UsbDeviceMonitor
+from app.services.usb_monitor_service import UsbMonitorService
 
 
 logger = logging.getLogger(__name__)
@@ -61,21 +62,19 @@ def _wait_for_usb_polls() -> None:
         logger.error("USB device polling did not finish before shutdown")
 
 
-class UsbDevicePoller(QObject):
-
-    state_ready = Signal(object)
-    poll_failed = Signal(object)
+class QtUsbMonitorAdapter(QObject):
 
     def __init__(
         self,
         device_monitor: UsbDeviceMonitor,
-        device_id: str | None = None,
+        monitor_service: UsbMonitorService,
         parent: QObject | None = None,
     ):
         super().__init__(parent)
 
         self.device_monitor = device_monitor
-        self.device_id = device_id
+        self.monitor_service = monitor_service
+        self.device_id = monitor_service.device_id
         self._generation = 0
         self._monitoring = False
         self._poll_in_flight = False
@@ -91,23 +90,25 @@ class UsbDevicePoller(QObject):
         self.timer.timeout.connect(self._check_device)
 
     def start(self, interval_ms: int = 500) -> None:
-        self.validate_interval(interval_ms)
+        self._validate_interval(interval_ms)
         self._generation += 1
         self._monitoring = True
+        self.monitor_service.begin_monitoring()
         self.timer.start(interval_ms)
         self._check_device()
 
     def set_interval(self, interval_ms: int) -> None:
-        self.validate_interval(interval_ms)
+        self._validate_interval(interval_ms)
         self.timer.setInterval(interval_ms)
 
     def stop(self) -> None:
         self._monitoring = False
         self._generation += 1
+        self.monitor_service.stop_monitoring()
         self.timer.stop()
 
     @staticmethod
-    def validate_interval(interval_ms: int) -> None:
+    def _validate_interval(interval_ms: int) -> None:
         if (
             not isinstance(interval_ms, int)
             or isinstance(interval_ms, bool)
@@ -144,7 +145,7 @@ class UsbDevicePoller(QObject):
                 self._check_device()
             return
 
-        self.state_ready.emit(current_state)
+        self.monitor_service.handle_state(current_state)
 
     def _on_poll_failed(self, generation: int, error: Exception) -> None:
         self._poll_in_flight = False
@@ -154,4 +155,4 @@ class UsbDevicePoller(QObject):
                 self._check_device()
             return
 
-        self.poll_failed.emit(error)
+        self.monitor_service.handle_poll_error(error)
