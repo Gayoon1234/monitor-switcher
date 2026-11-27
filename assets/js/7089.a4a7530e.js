@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmonitor_switcher_docs=self.webpackChunkmonitor_switcher_docs||[]).push([[7089],{7089(e,c,r){r.d(c,{createArchitectureServices:()=>s.S});var s=r(5796);r(4954)}}]);

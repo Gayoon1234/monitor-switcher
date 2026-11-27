@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmonitor_switcher_docs=self.webpackChunkmonitor_switcher_docs||[]).push([[884],{884(e,s,c){c.d(s,{createTreemapServices:()=>r.d});var r=c(6527);c(4954)}}]);
