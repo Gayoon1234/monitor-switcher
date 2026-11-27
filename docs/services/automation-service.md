@@ -13,11 +13,12 @@ input switching and an `ActivityRepository` for history.
 AutomationService(display_service, activity_repository, automations)
 ```
 
-The service is a Qt `QObject` and exposes the `activity_event` signal. The
-signal emits each `ActivityEvent` after it has been appended to the repository.
-Activity logging is enabled by default. Its setting is restored from
+The service is a framework-independent Python class. Its `activity_events`
+event hook publishes each `ActivityEvent` after it has been appended to the
+repository. The Qt service-event adapter converts that hook to a Qt signal for
+the UI. Activity logging is enabled by default. Its setting is restored from
 `config.json`. While paused, events are neither saved to the repository nor
-emitted, but device events continue to be handled and matching automations
+published, but device events continue to be handled and matching automations
 still run.
 
 ## Event handling

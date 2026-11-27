@@ -12,8 +12,9 @@ configured USB devices persisted by a `ConfigRepository`. It receives a
 UsbService(device_monitor, repository)
 ```
 
-The service is a Qt `QObject` and exposes the no-argument `devices_changed`
-signal. It emits this signal after each configured-device save.
+The service is a framework-independent Python class. Its `devices_changed`
+event hook publishes a notification after each configured-device save. The Qt
+service-event adapter exposes this notification as a Qt signal to the UI.
 
 ## Methods
 

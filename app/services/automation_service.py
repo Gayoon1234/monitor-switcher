@@ -1,8 +1,7 @@
 import logging
 from datetime import datetime
 
-from PySide6.QtCore import QObject, Signal
-
+from app.events import EventHook
 from app.models.activity_event import ActivityEvent
 from app.models.automation import ActionType, Automation, TriggerType
 from app.models.device_event import DeviceEvent, DeviceEventType
@@ -13,10 +12,7 @@ from app.services.display_service import DisplayService
 logger = logging.getLogger(__name__)
 
 
-class AutomationService(QObject):
-
-    activity_event = Signal(object)
-
+class AutomationService:
     def __init__(
         self,
         display_service: DisplayService,
@@ -24,12 +20,11 @@ class AutomationService(QObject):
         automations: list[Automation],
         store_activity_logs: bool = True,
     ):
-        super().__init__()
-
         self.display_service = display_service
         self.activity_repository = activity_repository
         self.automations = automations
         self.activity_logging_paused = not store_activity_logs
+        self.activity_events: EventHook[ActivityEvent] = EventHook()
 
     def handle_device_event(self, event: DeviceEvent) -> None:
         for automation in self.automations:
@@ -123,7 +118,7 @@ class AutomationService(QObject):
             return
 
         self.activity_repository.append(event)
-        self.activity_event.emit(event)
+        self.activity_events.emit(event)
 
     def set_activity_logging_paused(self, paused: bool) -> None:
         self.activity_logging_paused = paused

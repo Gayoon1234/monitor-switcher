@@ -3,6 +3,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
+from app.adapters.qt.usb_monitor_adapter import QtUsbMonitorAdapter
 from app.hardware.windows_monitor import WindowsMonitorController
 from app.hardware.windows_usb import WindowsUsbDeviceMonitor
 from app.services.activity_repository import ActivityRepository
@@ -73,18 +74,21 @@ automation_service = AutomationService(
 # -------------------------
 # USB event monitoring
 # -------------------------
-usb_monitor_service = UsbMonitorService(
-    device_monitor=usb_monitor,
-)
+usb_monitor_service = UsbMonitorService()
 
-usb_monitor_service.device_event.connect(
+usb_monitor_service.device_events.subscribe(
     automation_service.handle_device_event
+)
+usb_monitor_adapter = QtUsbMonitorAdapter(
+    device_monitor=usb_monitor,
+    monitor_service=usb_monitor_service,
+    parent=app,
 )
 
 usb_monitor_enabled = repository.load_usb_monitor_enabled()
 usb_monitor_interval_ms = repository.load_usb_monitor_interval_ms()
 if usb_monitor_enabled:
-    usb_monitor_service.start(usb_monitor_interval_ms)
+    usb_monitor_adapter.start(usb_monitor_interval_ms)
 
 
 # -------------------------
@@ -96,7 +100,7 @@ window = MainWindow(
     repository=repository,
     automation_service=automation_service,
     theme_service=theme_service,
-    usb_monitor_service=usb_monitor_service,
+    usb_monitor_adapter=usb_monitor_adapter,
 )
 
 window.show()

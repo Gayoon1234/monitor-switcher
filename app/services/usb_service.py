@@ -1,22 +1,19 @@
 from app.hardware.usb import UsbDeviceMonitor
 from app.models.usb_device import UsbDevice, ConfiguredUsbDevice
+from app.events import EventHook
 from app.services.config_repository import ConfigRepository
-from PySide6.QtCore import QObject, Signal
 
 
-class UsbService(QObject):
-
-    devices_changed = Signal()
+class UsbService:
 
     def __init__(
         self,
         device_monitor: UsbDeviceMonitor,
         repository: ConfigRepository,
     ):
-        super().__init__()
-
         self.device_monitor = device_monitor
         self.repository = repository
+        self.devices_changed: EventHook[None] = EventHook()
 
     def get_devices(self) -> list[UsbDevice]:
         return self.device_monitor.get_devices()
@@ -30,7 +27,7 @@ class UsbService(QObject):
         devices.append(device)
 
         self.repository.save_usb_devices(devices)
-        self.devices_changed.emit()
+        self.devices_changed.emit(None)
 
     def remove_device(self, device_id: str) -> None:
         devices = self.get_configured_devices()
@@ -42,7 +39,7 @@ class UsbService(QObject):
         ]
 
         self.repository.save_usb_devices(devices)
-        self.devices_changed.emit()
+        self.devices_changed.emit(None)
 
     def update_device(self, device: ConfiguredUsbDevice) -> None:
         devices = self.get_configured_devices()
@@ -53,4 +50,4 @@ class UsbService(QObject):
                 break
 
         self.repository.save_usb_devices(devices)
-        self.devices_changed.emit()
+        self.devices_changed.emit(None)

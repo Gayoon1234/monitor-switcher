@@ -184,7 +184,7 @@ def test_usb_monitor_settings_update_service_and_persist(tmp_path):
     repository = ConfigRepository(path=tmp_path / "config.json")
     calls = []
 
-    class FakeUsbMonitorService:
+    class FakeUsbMonitorAdapter:
         def start(self, interval_ms):
             calls.append(("start", interval_ms))
 
@@ -196,7 +196,7 @@ def test_usb_monitor_settings_update_service_and_persist(tmp_path):
 
     window = SimpleNamespace(
         repository=repository,
-        usb_monitor_service=FakeUsbMonitorService(),
+        usb_monitor_adapter=FakeUsbMonitorAdapter(),
     )
 
     MainWindow._set_usb_monitor_enabled(window, False)

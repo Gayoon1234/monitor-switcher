@@ -74,7 +74,7 @@ def create_automation(
     )
 
 
-def test_matching_enabled_automation_executes_action(qapp):
+def test_matching_enabled_automation_executes_action():
     automation = create_automation(
         actions=[
             Action(
@@ -111,7 +111,7 @@ def test_matching_enabled_automation_executes_action(qapp):
     assert repository.events[1].success is True
 
 
-def test_wrong_device_does_not_execute_automation(qapp):
+def test_wrong_device_does_not_execute_automation():
     automation = create_automation(
         actions=[
             Action(
@@ -137,7 +137,7 @@ def test_wrong_device_does_not_execute_automation(qapp):
     assert repository.events == []
 
 
-def test_disabled_automation_does_not_execute(qapp):
+def test_disabled_automation_does_not_execute():
     automation = create_automation(
         enabled=False,
         actions=[
@@ -164,7 +164,7 @@ def test_disabled_automation_does_not_execute(qapp):
     assert repository.events == []
 
 
-def test_connected_event_does_not_match_disconnected_trigger(qapp):
+def test_connected_event_does_not_match_disconnected_trigger():
     automation = create_automation(
         trigger_type=TriggerType.DEVICE_DISCONNECTED,
         actions=[
@@ -191,7 +191,7 @@ def test_connected_event_does_not_match_disconnected_trigger(qapp):
     assert repository.events == []
 
 
-def test_disconnected_event_matches_disconnected_trigger(qapp):
+def test_disconnected_event_matches_disconnected_trigger():
     automation = create_automation(
         trigger_type=TriggerType.DEVICE_DISCONNECTED,
         actions=[
@@ -227,7 +227,7 @@ def test_disconnected_event_matches_disconnected_trigger(qapp):
     ]
 
 
-def test_do_nothing_action_does_not_call_display_service(qapp):
+def test_do_nothing_action_does_not_call_display_service():
     automation = create_automation(
         actions=[
             Action(type=ActionType.DO_NOTHING)
@@ -255,7 +255,7 @@ def test_do_nothing_action_does_not_call_display_service(qapp):
     ]
 
 
-def test_multiple_actions_are_all_executed(qapp):
+def test_multiple_actions_are_all_executed():
     automation = create_automation(
         actions=[
             Action(
@@ -297,7 +297,7 @@ def test_multiple_actions_are_all_executed(qapp):
     ]
 
 
-def test_failed_action_creates_failed_activity_event(qapp):
+def test_failed_action_creates_failed_activity_event():
     automation = create_automation(
         actions=[
             Action(
@@ -333,7 +333,7 @@ def test_failed_action_creates_failed_activity_event(qapp):
     assert "Monitor unavailable" in failed_event.message
 
 
-def test_failed_action_does_not_prevent_later_actions(qapp):
+def test_failed_action_does_not_prevent_later_actions():
     automation = create_automation(
         actions=[
             Action(
@@ -386,7 +386,7 @@ def test_failed_action_does_not_prevent_later_actions(qapp):
     assert repository.events[-1].success is True
 
 
-def test_pausing_activity_logging_keeps_automations_running(qapp):
+def test_pausing_activity_logging_keeps_automations_running():
     automation = create_automation(
         actions=[
             Action(
@@ -400,7 +400,7 @@ def test_pausing_activity_logging_keeps_automations_running(qapp):
         [automation]
     )
     emitted_events = []
-    service.activity_event.connect(emitted_events.append)
+    service.activity_events.subscribe(emitted_events.append)
     service.set_activity_logging_paused(True)
 
     service.handle_device_event(
@@ -428,7 +428,7 @@ def test_pausing_activity_logging_keeps_automations_running(qapp):
     ]
 
 
-def test_activity_logging_can_start_disabled(qapp):
+def test_activity_logging_can_start_disabled():
     repository = FakeActivityRepository()
     service = AutomationService(
         display_service=FakeDisplayService(),
