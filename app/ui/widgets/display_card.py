@@ -57,7 +57,7 @@ class DisplayCard(QFrame):
 
         self.input_selector.setEnabled(bool(self.display.inputs))
         self.input_selector.setToolTip(
-            "Select the monitor input to switch to."
+            "Select the display input to switch to."
         )
         self.input_selector.currentTextChanged.connect(
             self._switch_input

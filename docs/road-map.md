@@ -18,6 +18,9 @@ Ideas ready to be considered for upcoming releases.
 ## QoL/Things I forgot to add
 
 - A setting to rediscover displays.
+- Better perf tests
+- Expand unit test coverage
+- E2E tests
 
 ## Completed
 

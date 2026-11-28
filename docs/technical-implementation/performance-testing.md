@@ -4,6 +4,10 @@ title: Performance Testing
 sidebar_position: 2
 ---
 
+> Historical report: the benchmark scripts used to collect these results have
+> been removed from the repository. The commands below document past runs and
+> are not runnable in the current checkout.
+
 ## Hypothesis
 
 Scrolling lag may be caused by UI work increasing with the number of visible
@@ -25,11 +29,11 @@ The source database is read-only. Activity displays 25 event cards per page.
 sends wheel events to scrollable areas. Synthetic data preparation and real
 data discovery are timed separately from widget construction. Real-data mode
 reads the configured activity period and a read-only database snapshot, USB
-devices through the Windows monitor, and displays through read-only discovery.
+devices through the Windows USB integration, and displays through read-only discovery.
 Page actions and display selectors are disabled; the benchmark does not start
 `main.py`, connect USB events to automations, or write to configuration,
 activity data, or display inputs. In real-data mode, `--usb-monitor` selects
-the configured monitor state or forces it on/off without changing config. When
+the configured USB monitor state or forces it on/off without changing config. When
 enabled, the production `QtUsbMonitorAdapter` enumerates USB devices in a worker
 thread and passes snapshots to `UsbMonitorService`, with no automation receiver
 attached. The pre-change baseline below
@@ -52,7 +56,7 @@ py perf\run_ui_benchmark_matrix.py --real-data --usb-monitor disabled --scroll-e
 ```
 
 `benchmark_hardware.py` separately times live USB enumeration and display
-discovery. It queries monitor capabilities and current inputs but does not
+discovery. It queries display capabilities and current inputs but does not
 switch inputs or modify application data.
 
 ### Activity history

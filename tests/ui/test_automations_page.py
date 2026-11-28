@@ -1,3 +1,4 @@
+from app.events import EventHook
 from app.models.automation import (
     Action,
     ActionType,
@@ -5,6 +6,7 @@ from app.models.automation import (
     Trigger,
     TriggerType,
 )
+from app.models.config import ConfigKey
 from app.ui.pages.automations import AutomationsPage
 from app.ui.widgets.automation_editor import ActionWidget
 
@@ -12,9 +14,16 @@ from app.ui.widgets.automation_editor import ActionWidget
 class RepositoryStub:
     def __init__(self, automations=None):
         self.automations = automations or []
+        self.config_changed = EventHook()
 
-    def load_automations(self):
+    def get_config(self, key):
+        assert key is ConfigKey.AUTOMATIONS
         return self.automations
+
+    def update_config(self, key, automations):
+        assert key is ConfigKey.AUTOMATIONS
+        self.automations = list(automations)
+        self.config_changed.emit(key)
 
 
 class DisplayServiceStub:
@@ -79,6 +88,27 @@ def test_automations_page_summarizes_and_displays_cards(qapp):
         type(page.empty_state),
         "automationStatus",
     ).text() == "Enabled"
+
+
+def test_automations_page_refreshes_when_config_changes(qapp):
+    repository = RepositoryStub([make_automation("Before", True)])
+    page = AutomationsPage(
+        repository,
+        DisplayServiceStub(),
+        UsbServiceStub(),
+    )
+
+    repository.update_config(
+        ConfigKey.AUTOMATIONS,
+        [
+            make_automation("After one", True),
+            make_automation("After two", False),
+        ],
+    )
+
+    assert page.summary.text() == "2 automations  ·  1 enabled"
+    assert page.automations_layout.count() == 2
+    page.close()
 
 
 def test_do_nothing_action_disables_display_controls(qapp):

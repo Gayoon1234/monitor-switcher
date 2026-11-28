@@ -1,3 +1,5 @@
+from app.events import EventHook
+from app.models.config import ConfigKey
 from app.models.display import Display, DisplayInput, InputType
 from app.services.display_service import DisplayService
 
@@ -6,12 +8,17 @@ class FakeDisplayRepository:
     def __init__(self, displays=None):
         self.displays = displays or []
         self.saved_displays = []
+        self.config_changed = EventHook()
 
-    def load_displays(self):
+    def get_config(self, key):
+        assert key is ConfigKey.DISPLAYS
         return list(self.displays)
 
-    def save_displays(self, displays):
+    def update_config(self, key, displays):
+        assert key is ConfigKey.DISPLAYS
+        self.displays = list(displays)
         self.saved_displays.append(list(displays))
+        self.config_changed.emit(key)
 
 
 class FakeDisplayDiscovery:
@@ -24,7 +31,7 @@ class FakeDisplayDiscovery:
         return list(self.displays)
 
 
-class FakeMonitorController:
+class FakeDisplayController:
     def __init__(self):
         self.set_displays_calls = []
         self.switch_input_calls = []
@@ -43,7 +50,7 @@ class FakeMonitorController:
 def create_display(
     *,
     display_id="display-001",
-    name="Test Monitor",
+    name="Test Display",
     windows_device_id="DISPLAY\\TEST",
     inputs=None,
     current_input=None,
@@ -64,10 +71,10 @@ def create_service(
 ):
     repository = FakeDisplayRepository(repository_displays)
     discovery = FakeDisplayDiscovery(discovered_displays)
-    controller = FakeMonitorController()
+    controller = FakeDisplayController()
 
     service = DisplayService(
-        monitor_controller=controller,
+        display_controller=controller,
         display_discovery=discovery,
         repository=repository,
     )
@@ -114,11 +121,11 @@ def test_discovers_and_saves_displays_when_repository_is_empty():
 
 def test_refresh_displays_discovers_saves_and_updates_controller():
     initial_display = create_display(
-        name="Old Monitor",
+        name="Old Display",
         windows_device_id="DISPLAY\\OLD",
     )
     refreshed_display = create_display(
-        name="New Monitor",
+        name="New Display",
         windows_device_id="DISPLAY\\NEW",
     )
 
@@ -141,7 +148,7 @@ def test_refresh_displays_discovers_saves_and_updates_controller():
 
 def test_refresh_displays_updates_current_inputs():
     saved_display = create_display(
-        name="Test Monitor",
+        name="Test Display",
         windows_device_id="DISPLAY\\TEST",
         current_input=None,
         inputs=[
@@ -150,7 +157,7 @@ def test_refresh_displays_updates_current_inputs():
     )
 
     live_display = create_display(
-        name="Test Monitor",
+        name="Test Display",
         windows_device_id="DISPLAY\\TEST",
         current_input="HDMI1",
         inputs=[
@@ -202,7 +209,7 @@ def test_switch_input_does_not_update_display_when_controller_fails():
         discovered_displays=[display],
     )
 
-    controller.error = RuntimeError("Monitor unavailable")
+    controller.error = RuntimeError("Display unavailable")
 
     try:
         service.switch_input("display-001", "ANALOG1")
@@ -233,3 +240,17 @@ def test_switch_input_unknown_display_raises_error():
         raise AssertionError("Expected ValueError")
 
     assert controller.switch_input_calls == []
+
+
+def test_external_display_config_update_refreshes_service_and_controller():
+    initial_display = create_display(display_id="display-001")
+    updated_display = create_display(display_id="display-002")
+    service, repository, _, controller = create_service(
+        repository_displays=[initial_display],
+    )
+    controller.set_displays_calls.clear()
+
+    repository.update_config(ConfigKey.DISPLAYS, [updated_display])
+
+    assert service.get_displays() == [updated_display]
+    assert controller.set_displays_calls == [[updated_display]]

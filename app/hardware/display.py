@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from app.models.display import Display
 
 
-class MonitorController(ABC):
+class DisplayController(ABC):
 
     @abstractmethod
     def set_displays(self, displays: list[Display]) -> None:

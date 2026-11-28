@@ -2,16 +2,16 @@ import win32com.client
 
 from monitorcontrol import InputSource, get_monitors
 
-from app.hardware.monitor import DisplayDiscovery, MonitorController
+from app.hardware.display import DisplayController, DisplayDiscovery
 from app.models.display import Display, DisplayInput, InputType
 
 
-class WindowsMonitorController(MonitorController, DisplayDiscovery):
+class WindowsDisplayController(DisplayController, DisplayDiscovery):
 
     def __init__(self):
-        self.monitors = get_monitors()
+        self.display_objects = get_monitors()
         self.displays: list[Display] = []
-        self._monitor_map: dict[str, object] = {}
+        self._display_object_map: dict[str, object] = {}
         self._display_lookup: dict[str, Display] = {}
 
     def set_displays(self, displays: list[Display]) -> None:
@@ -20,18 +20,18 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
             display.id: display
             for display in self.displays
         }
-        self._monitor_map = {
-            display.id: monitor
-            for display, monitor in zip(self.displays, self.monitors)
+        self._display_object_map = {
+            display.id: display_object
+            for display, display_object in zip(self.displays, self.display_objects)
         }
 
     def switch_input(self, display_id: str, input_id: str) -> None:
-        monitor = self._monitor_map.get(display_id)
-        if monitor is None:
+        display_object = self._display_object_map.get(display_id)
+        if display_object is None:
             raise KeyError(f"Display not configured for switching: {display_id}")
 
-        with monitor:
-            monitor.set_input_source(input_id)
+        with display_object:
+            display_object.set_input_source(input_id)
 
         display = self._display_lookup.get(display_id)
         if display is not None:
@@ -51,10 +51,14 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
         result = []
 
         for index, device in enumerate(display_devices):
-            monitor = self.monitors[index] if index < len(self.monitors) else None
+            display_object = (
+                self.display_objects[index]
+                if index < len(self.display_objects)
+                else None
+            )
 
-            inputs = self._get_inputs(monitor)
-            current_input = self._get_current_input(monitor, inputs)
+            inputs = self._get_inputs(display_object)
+            current_input = self._get_current_input(display_object, inputs)
 
             result.append(
                 Display(
@@ -69,16 +73,16 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
         return result
 
 
-    def _get_inputs(self, monitor) -> list[DisplayInput]:
-        if monitor is None:
+    def _get_inputs(self, display_object) -> list[DisplayInput]:
+        if display_object is None:
             return []
 
         try:
-            with monitor:
-                capabilities = monitor.get_vcp_capabilities()
+            with display_object:
+                capabilities = display_object.get_vcp_capabilities()
         except Exception:
             # get_vcp_capabilities does not work on the HP w1907...don't know why...
-            if monitor.vcp.description == "HP w1907 Wide LCD Monitor":
+            if display_object.vcp.description == "HP w1907 Wide LCD Monitor":
                 return [
                     DisplayInput("ANALOG1", InputType.ANALOG),
                     DisplayInput("DVI1", InputType.DVI),
@@ -122,15 +126,15 @@ class WindowsMonitorController(MonitorController, DisplayDiscovery):
 
     def _get_current_input(
         self,
-        monitor,
+        display_object,
         inputs: list[DisplayInput],
     ) -> str | None:
-        if monitor is None:
+        if display_object is None:
             return None
 
         try:
-            with monitor:
-                value = monitor.get_input_source()
+            with display_object:
+                value = display_object.get_input_source()
         except Exception:
             return None
 

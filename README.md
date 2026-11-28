@@ -1,11 +1,11 @@
 # Monitor Switcher
 
-Monitor Switcher is a Windows desktop utility for automatically switching monitor inputs when a specific USB device connects or disconnects.
+Monitor Switcher is a Windows desktop utility for automatically switching display inputs when a specific USB device connects or disconnects.
 
 It is designed for setups where a display should change to the correct source when a laptop, dock, console, or other USB device appears. Typical uses include:
 
-- switching a monitor to a laptop dock when the dock is plugged in
-- changing a TV or monitor to a console when a controller/console adapter is connected
+- switching a display to a laptop dock when the dock is plugged in
+- changing a TV or display to a console when a controller/console adapter is connected
 - switching back to a different input when the device is unplugged
 
 ## What the software does
@@ -33,8 +33,8 @@ The software uses Windows WMI and the `monitorcontrol` library to enumerate hard
 
 - Windows 10 or Windows 11
 - Python 3.11 or newer
-- A machine with a supported monitor that can be controlled through Windows APIs
-- A monitor and USB device setup that you want to automate
+- A machine with a supported display that can be controlled through Windows APIs
+- A display and USB device setup that you want to automate
 
 ## Installation
 
@@ -107,7 +107,7 @@ Configure:
 Example:
 
 - Trigger: `Laptop Dock connected`
-- Action: switch `Living Room Monitor` to `HDMI 2`
+- Action: switch `Living Room Display` to `HDMI 2`
 
 When the dock is plugged in, the app will send the input-change command to the selected display.
 
@@ -165,7 +165,7 @@ A simplified example of the persisted config looks like this:
   "displays": [
     {
       "id": "display-001",
-      "name": "Living Room Monitor",
+      "name": "Living Room Display",
       "windows_device_id": "DISPLAY\\...",
       "inputs": [
         {"input_id": "HDMI2", "input_type": "HDMI"}
@@ -186,7 +186,7 @@ A simplified example of the persisted config looks like this:
 
 ```text
 app/
-  hardware/        Windows monitor and USB integration
+  hardware/        Windows display and USB integration
   models/          Data models for displays, USB devices, and automations
   services/        Loading, saving, switching, and automation logic
   ui/              PySide6 user interface screens and widgets

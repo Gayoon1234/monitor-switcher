@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.adapters.qt.service_event_adapter import QtServiceEventAdapter
+from app.models.config import ConfigKey
 from app.ui.pages.my_devices import MyDevicesPage
 from app.ui.pages.automations import AutomationsPage
 from app.ui.pages.activity import ActivityPage
@@ -82,15 +83,15 @@ class MainWindow(QMainWindow):
             )
         )
         
-        self.pages.addWidget(
-            AutomationsPage(
-                self.repository,
-                self.display_service,
-                self.usb_service
-            )
+        self.automations_page = AutomationsPage(
+            self.repository,
+            self.display_service,
+            self.usb_service,
         )
+        self.pages.addWidget(self.automations_page)
         
-        activity_days = self.repository.load_activity_days()
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        activity_days = settings.activity_days
         self.activity_page = ActivityPage(
             activity_history=self.automation_service.get_activity_history(
                 activity_days
@@ -107,14 +108,10 @@ class MainWindow(QMainWindow):
                 self.theme_service,
                 activity_days=activity_days,
                 activity_logging_paused=(
-                    self.automation_service.activity_logging_paused
+                    not settings.store_activity_logs
                 ),
-                usb_monitor_enabled=(
-                    self.repository.load_usb_monitor_enabled()
-                ),
-                usb_monitor_interval_ms=(
-                    self.repository.load_usb_monitor_interval_ms()
-                ),
+                usb_monitor_enabled=settings.usb_monitor_enabled,
+                usb_monitor_interval_ms=settings.usb_monitor_interval_ms,
             )
             self.settings_page.theme_changed.connect(
                 self._set_active_theme
@@ -155,6 +152,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.service_event_adapter.close()
+        self.automations_page.close()
+        self.automation_service.close()
         if self.usb_monitor_adapter is not None:
             self.usb_monitor_adapter.stop()
         super().closeEvent(event)
@@ -168,30 +167,39 @@ class MainWindow(QMainWindow):
             )
 
     def _set_activity_period(self, days):
-        self.repository.save_activity_days(days)
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        settings.activity_days = days
+        self.repository.update_config(ConfigKey.SETTINGS, settings)
         self.activity_page.days = days
         self.activity_page.set_events(
             self.automation_service.get_activity_history(days)
         )
 
     def _set_activity_logging_paused(self, paused):
-        self.repository.save_store_activity_logs(not paused)
-        self.automation_service.set_activity_logging_paused(paused)
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        settings.store_activity_logs = not paused
+        self.repository.update_config(ConfigKey.SETTINGS, settings)
 
     def _set_usb_monitor_enabled(self, enabled):
-        self.repository.save_usb_monitor_enabled(enabled)
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        settings.usb_monitor_enabled = enabled
+        self.repository.update_config(ConfigKey.SETTINGS, settings)
         if self.usb_monitor_adapter is None:
             return
 
         if enabled:
             self.usb_monitor_adapter.start(
-                self.repository.load_usb_monitor_interval_ms()
+                self.repository.get_config(
+                    ConfigKey.SETTINGS
+                ).usb_monitor_interval_ms
             )
         else:
             self.usb_monitor_adapter.stop()
 
     def _set_usb_monitor_interval(self, interval_ms):
-        self.repository.save_usb_monitor_interval_ms(interval_ms)
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        settings.usb_monitor_interval_ms = interval_ms
+        self.repository.update_config(ConfigKey.SETTINGS, settings)
         if self.usb_monitor_adapter is not None:
             self.usb_monitor_adapter.set_interval(interval_ms)
 

@@ -4,11 +4,12 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from app.adapters.qt.usb_monitor_adapter import QtUsbMonitorAdapter
-from app.hardware.windows_monitor import WindowsMonitorController
+from app.hardware.windows_display import WindowsDisplayController
 from app.hardware.windows_usb import WindowsUsbDeviceMonitor
 from app.services.activity_repository import ActivityRepository
 from app.services.automation_service import AutomationService
 from app.services.config_repository import ConfigRepository
+from app.models.config import ConfigKey
 from app.services.display_service import DisplayService
 from app.services.theme_service import ThemeService
 from app.services.usb_monitor_service import UsbMonitorService
@@ -35,7 +36,7 @@ app.setStyleSheet(theme_service.get_stylesheet())
 # -------------------------
 # Hardware
 # -------------------------
-monitor_controller = WindowsMonitorController()
+display_controller = WindowsDisplayController()
 usb_monitor = WindowsUsbDeviceMonitor()
 
 
@@ -45,8 +46,8 @@ usb_monitor = WindowsUsbDeviceMonitor()
 repository = ConfigRepository()
 
 display_service = DisplayService(
-    monitor_controller=monitor_controller,
-    display_discovery=monitor_controller,
+    display_controller=display_controller,
+    display_discovery=display_controller,
     repository=repository,
 )
 
@@ -61,13 +62,10 @@ usb_service = UsbService(
 # -------------------------
 # Automations
 # -------------------------
-automations = repository.load_automations()
-
 automation_service = AutomationService(
     display_service=display_service,
-    automations=automations,
     activity_repository=activity_repository,
-    store_activity_logs=repository.load_store_activity_logs(),
+    config_repository=repository,
 )
 
 
@@ -85,10 +83,9 @@ usb_monitor_adapter = QtUsbMonitorAdapter(
     parent=app,
 )
 
-usb_monitor_enabled = repository.load_usb_monitor_enabled()
-usb_monitor_interval_ms = repository.load_usb_monitor_interval_ms()
-if usb_monitor_enabled:
-    usb_monitor_adapter.start(usb_monitor_interval_ms)
+settings = repository.get_config(ConfigKey.SETTINGS)
+if settings.usb_monitor_enabled:
+    usb_monitor_adapter.start(settings.usb_monitor_interval_ms)
 
 
 # -------------------------

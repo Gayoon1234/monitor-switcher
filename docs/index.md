@@ -5,15 +5,12 @@ slug: /
 sidebar_position: 0
 ---
 
-Monitor Switcher is a Windows desktop application that switches monitor inputs based on USB device connection events.
+Monitor Switcher is a Windows desktop application that switches display inputs based on USB device connection events.
 
 ## Documentation areas
 
 - [Technical implementation](technical-implementation.md)
 - [Road Map](road-map.md)
-- [Hardware](hardware/Abstract%20Classes/monitor.md)
-- [Services](services/index.md)
-- [UI](ui/index.md)
 
 ## Develop the documentation
 

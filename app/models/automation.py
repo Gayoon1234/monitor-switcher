@@ -9,7 +9,7 @@ class TriggerType(Enum):
 
 # Do nothing doesn't do anything (crazy I know) but is used for testing.
 # Or to create a placeholder.
-# Automations only switch the monitor input - but can be expanded later.
+# Automations only switch the display input - but can be expanded later.
 class ActionType(Enum):
     SWITCH_INPUT = "switch_input"
     DO_NOTHING = "do_nothing"

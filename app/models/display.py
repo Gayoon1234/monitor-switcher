@@ -13,7 +13,7 @@ class InputType(Enum):
 @dataclass
 class DisplayInput:
     input_id: str # used internally to identify a specific input on a display
-    input_type: InputType # what monitor control sends back
+    input_type: InputType # what display control sends back
 
 
 @dataclass
