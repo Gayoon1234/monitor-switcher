@@ -28,11 +28,12 @@ flowchart TB
     end
 
     subgraph Domain["Domain Models"]
-        Models["AppConfig / AppSettings / ConfigKey / Display / UsbDevice / Automation / Events"]
+        ConfigModels["AppConfig / AppSettings / ConfigKey"]
+        Models["Display / UsbDevice / Automation / Events"]
     end
 
     subgraph Persistence["Persistence"]
-        ConfigRepo["ConfigRepository"]
+        ConfigRepo["ConfigRepository<br/>shared app-scoped instance"]
         ActivityRepo["ActivityRepository"]
         Config["config.json"]
         Theme["theme.json"]
@@ -73,7 +74,12 @@ flowchart TB
     UsbService --> UsbMonitor
     UsbService --> ConfigRepo
 
+    ConfigRepo --> ConfigModels
     ConfigRepo --> Config
+    ConfigRepo -.->|"config_changed(ConfigKey)"| DisplayService
+    ConfigRepo -.->|"config_changed(ConfigKey)"| UsbService
+    ConfigRepo -.->|"config_changed(ConfigKey)"| AutomationService
+    ConfigRepo -.->|"config_changed(ConfigKey)"| Pages
     ThemeService --> Theme
     ActivityRepo --> ActivityDB
 
@@ -90,8 +96,10 @@ flowchart TD
     Entry --> Theme["ThemeService"]
     Entry --> Monitor["WindowsMonitorController"]
     Entry --> UsbHardware["WindowsUsbDeviceMonitor"]
-    Entry --> Config["ConfigRepository"]
+    Entry --> Config["ConfigRepository<br/>shared app-scoped instance"]
 
+    Config -->|"load / validate"| AppConfig["AppConfig + AppSettings"]
+    AppConfig -->|"serialize"| ConfigFile["config.json"]
     Config --> Display["DisplayService"]
     Monitor --> Display
 
@@ -100,6 +108,9 @@ flowchart TD
 
     Entry --> Activity["ActivityRepository"]
     Config --> Automation["AutomationService"]
+    Config -.->|"config_changed(ConfigKey)"| Display
+    Config -.->|"config_changed(ConfigKey)"| Usb
+    Config -.->|"config_changed(ConfigKey)"| Automation
     Display --> Automation
     Activity --> Automation
     Config -->|"USB monitoring settings"| Entry
@@ -110,6 +121,7 @@ flowchart TD
     QtUsb --> MonitorService
 
     Entry --> Window["MainWindow"]
+    Config --> Window
     Display --> Window
     Usb --> Window
     Automation --> Window
