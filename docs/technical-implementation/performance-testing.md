@@ -4,6 +4,10 @@ title: Performance Testing
 sidebar_position: 2
 ---
 
+> Historical report: the benchmark scripts used to collect these results have
+> been removed from the repository. The commands below document past runs and
+> are not runnable in the current checkout.
+
 ## Hypothesis
 
 Scrolling lag may be caused by UI work increasing with the number of visible
