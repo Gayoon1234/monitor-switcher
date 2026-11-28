@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="generator" content="Docusaurus v3.10.2">
 <title data-rh="true">Technical implementation | Monitor Switcher</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://gayoon1234.github.io/monitor-switcher/technical-implementation"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Technical implementation | Monitor Switcher"><meta data-rh="true" name="description" content="This document describes the architecture of Monitor Switcher, including the main data models, hardware integration, persistence layer, event flow, and UI structure."><meta data-rh="true" property="og:description" content="This document describes the architecture of Monitor Switcher, including the main data models, hardware integration, persistence layer, event flow, and UI structure."><link data-rh="true" rel="canonical" href="https://gayoon1234.github.io/monitor-switcher/technical-implementation"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/technical-implementation" hreflang="en"><link data-rh="true" rel="alternate" href="https://gayoon1234.github.io/monitor-switcher/technical-implementation" hreflang="x-default"><script data-rh="true" type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Technical implementation","item":"https://gayoon1234.github.io/monitor-switcher/technical-implementation"}]}</script><link rel="stylesheet" href="/monitor-switcher/assets/css/styles.d17e6bcf.css">
-<script src="/monitor-switcher/assets/js/runtime~main.9073bcc2.js" defer="defer"></script>
+<script src="/monitor-switcher/assets/js/runtime~main.3f552560.js" defer="defer"></script>
 <script src="/monitor-switcher/assets/js/main.56de408e.js" defer="defer"></script>
 </head>
 <body>
@@ -156,13 +156,15 @@
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="4-persistence-and-storage">4. Persistence and storage<a href="#4-persistence-and-storage" class="hash-link" aria-label="Direct link to 4. Persistence and storage" title="Direct link to 4. Persistence and storage" translate="no">​</a></h2>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="41-json-configuration">4.1 JSON configuration<a href="#41-json-configuration" class="hash-link" aria-label="Direct link to 4.1 JSON configuration" title="Direct link to 4.1 JSON configuration" translate="no">​</a></h3>
 <p><code>ConfigRepository</code> in <code>app/services/config_repository.py</code> saves and loads the app&#x27;s state from <code>config.json</code>.</p>
-<p>It handles three collections:</p>
+<p><code>main.py</code> creates one app-scoped repository and injects it into services and UI components. <code>AppConfig</code> and <code>AppSettings</code> in <code>app/models/config.py</code> model the persisted data, while <code>ConfigKey</code> selects a typed collection or the complete settings object.</p>
+<p>The repository provides typed <code>get_config</code>, <code>update_config</code>, <code>add_config</code>, and <code>remove_config</code> operations. Collection operations validate their model types and use stable IDs for removal. Updates are persisted before a <code>config_changed</code> event is emitted, allowing services and UI components to refresh without keeping stale startup snapshots.</p>
+<p>The JSON document contains these collections:</p>
 <ul>
 <li class=""><code>usb_devices</code></li>
 <li class=""><code>automations</code></li>
 <li class=""><code>displays</code></li>
 </ul>
-<p>The repository converts dataclasses to dictionaries for JSON serialization and rehydrates them when the app starts.</p>
+<p>It also stores application settings under <code>settings</code>. The <code>AppConfig</code> model validates JSON values and converts between the typed models and the persisted document.</p>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="42-sqlite-activity-log">4.2 SQLite activity log<a href="#42-sqlite-activity-log" class="hash-link" aria-label="Direct link to 4.2 SQLite activity log" title="Direct link to 4.2 SQLite activity log" translate="no">​</a></h3>
 <p><code>ActivityRepository</code> in <code>app/services/activity_repository.py</code> uses SQLite to store the event log in <code>activity.db</code>.</p>
 <p>Schema:</p>
