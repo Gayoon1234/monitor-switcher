@@ -6,6 +6,217 @@ sidebar_position: 1
 
 This document describes the architecture of Monitor Switcher, including the main data models, hardware integration, persistence layer, event flow, and UI structure.
 
+## Architecture diagrams
+
+### Component architecture
+
+```mermaid
+flowchart TB
+    subgraph Desktop["PySide6 Desktop Application"]
+        Main["main.py<br/>Composition root"]
+        Window["MainWindow"]
+        Pages["UI Pages<br/>Devices, Automations, Activity, Settings"]
+        QtAdapter["Qt Service/Event Adapters"]
+    end
+
+    subgraph Application["Application Services"]
+        DisplayService["DisplayService"]
+        UsbService["UsbService"]
+        AutomationService["AutomationService"]
+        UsbMonitorService["UsbMonitorService"]
+        ThemeService["ThemeService"]
+    end
+
+    subgraph Domain["Domain Models"]
+        Models["Display / UsbDevice / Automation / Events"]
+    end
+
+    subgraph Persistence["Persistence"]
+        ConfigRepo["ConfigRepository"]
+        ActivityRepo["ActivityRepository"]
+        Config["config.json"]
+        Theme["theme.json"]
+        ActivityDB[("activity.db")]
+    end
+
+    subgraph Hardware["Windows Hardware"]
+        MonitorController["WindowsMonitorController"]
+        UsbMonitor["WindowsUsbDeviceMonitor"]
+        WMI["Windows WMI"]
+        MonitorControl["monitorcontrol"]
+    end
+
+    Main --> Window
+    Main --> DisplayService
+    Main --> UsbService
+    Main --> AutomationService
+    Main --> UsbMonitorService
+    Main --> ThemeService
+
+    Window --> Pages
+    Window --> QtAdapter
+    Pages --> DisplayService
+    Pages --> UsbService
+    Pages --> AutomationService
+    Pages --> ConfigRepo
+
+    QtAdapter -->|"Qt signals"| Pages
+    QtAdapter -->|"EventHook subscriptions"| AutomationService
+    QtAdapter -->|"EventHook subscriptions"| UsbService
+
+    AutomationService --> DisplayService
+    AutomationService --> ActivityRepo
+    AutomationService --> Models
+    UsbMonitorService --> Models
+    DisplayService --> ConfigRepo
+    DisplayService --> MonitorController
+    UsbService --> UsbMonitor
+    UsbService --> ConfigRepo
+
+    ConfigRepo --> Config
+    ThemeService --> Theme
+    ActivityRepo --> ActivityDB
+
+    MonitorController --> MonitorControl
+    MonitorController --> WMI
+    UsbMonitor --> WMI
+```
+
+### Startup and dependency wiring
+
+```mermaid
+flowchart TD
+    Entry["main.py"] --> QApplication["QApplication"]
+    Entry --> Theme["ThemeService"]
+    Entry --> Monitor["WindowsMonitorController"]
+    Entry --> UsbHardware["WindowsUsbDeviceMonitor"]
+    Entry --> Config["ConfigRepository"]
+
+    Config --> Display["DisplayService"]
+    Monitor --> Display
+
+    Config --> Usb["UsbService"]
+    UsbHardware --> Usb
+
+    Config --> Automations["Loaded automations"]
+    Entry --> Activity["ActivityRepository"]
+    Automations --> Automation["AutomationService"]
+    Display --> Automation
+    Activity --> Automation
+    Config -->|"store activity + polling settings"| Entry
+
+    UsbHardware --> QtUsb["QtUsbMonitorAdapter"]
+    Entry --> MonitorService["UsbMonitorService"]
+    MonitorService -->|"device_events subscription"| Automation
+    QtUsb --> MonitorService
+
+    Entry --> Window["MainWindow"]
+    Display --> Window
+    Usb --> Window
+    Automation --> Window
+    Theme --> Window
+    QtUsb --> Window
+    Window -->|"app.exec()"| Running["Qt Event Loop"]
+```
+
+### USB event and automation sequence
+
+```mermaid
+sequenceDiagram
+    participant Timer as QTimer / Qt Adapter
+    participant Poll as QRunnable
+    participant USB as WindowsUsbDeviceMonitor
+    participant Monitor as UsbMonitorService
+    participant Automation as AutomationService
+    participant Display as DisplayService
+    participant Hardware as WindowsMonitorController
+    participant Log as ActivityRepository
+
+    loop Every configured interval
+        Timer->>Poll: Start USB polling task
+        Poll->>USB: get_devices()
+        USB-->>Poll: Live UsbDevice list
+        Poll-->>Monitor: connected IDs or state
+        Monitor->>Monitor: Compare with previous state
+        alt State changed
+            Monitor->>Automation: emit DeviceEvent
+            Automation->>Automation: Match device and trigger
+            Automation->>Display: switch_input(displayId, inputId)
+            Display->>Hardware: switch_input(displayId, inputId)
+            Hardware-->>Display: Success or exception
+            Automation->>Log: append ActivityEvent
+            Automation-->>Monitor: activity_events EventHook
+        end
+    end
+```
+
+### Domain model relationships
+
+```mermaid
+classDiagram
+    class Display {
+        +str id
+        +str name
+        +str windows_device_id
+        +list~DisplayInput~ inputs
+        +str current_input
+    }
+
+    class DisplayInput {
+        +str input_id
+        +InputType input_type
+    }
+
+    class UsbDevice {
+        +str windows_device_id
+        +str name
+    }
+
+    class ConfiguredUsbDevice {
+        +str id
+        +str windows_device_id
+        +str nickname
+    }
+
+    class Automation {
+        +str id
+        +str name
+        +bool enabled
+        +Trigger trigger
+        +list~Action~ actions
+    }
+
+    class Trigger {
+        +TriggerType type
+        +str device_id
+    }
+
+    class Action {
+        +ActionType type
+        +str display_id
+        +str input_id
+    }
+
+    class DeviceEvent {
+        +str device_id
+        +DeviceEventType event_type
+    }
+
+    class ActivityEvent {
+        +datetime timestamp
+        +str event_type
+        +str message
+        +bool success
+    }
+
+    Display "1" *-- "many" DisplayInput
+    Automation "1" *-- "1" Trigger
+    Automation "1" *-- "many" Action
+    Trigger --> ConfiguredUsbDevice : references device_id
+    Action --> Display : references display_id
+    DeviceEvent --> ConfiguredUsbDevice : references device_id
+```
+
 ## 1. System overview
 
 Monitor Switcher is a Windows desktop application with a layered architecture:
