@@ -41,7 +41,7 @@ flowchart TB
     end
 
     subgraph Hardware["Windows Hardware"]
-        MonitorController["WindowsMonitorController"]
+        DisplayController["WindowsDisplayController"]
         UsbMonitor["WindowsUsbDeviceMonitor"]
         WMI["Windows WMI"]
         MonitorControl["monitorcontrol"]
@@ -70,7 +70,7 @@ flowchart TB
     AutomationService --> Models
     UsbMonitorService --> Models
     DisplayService --> ConfigRepo
-    DisplayService --> MonitorController
+    DisplayService --> DisplayController
     UsbService --> UsbMonitor
     UsbService --> ConfigRepo
 
@@ -83,8 +83,8 @@ flowchart TB
     ThemeService --> Theme
     ActivityRepo --> ActivityDB
 
-    MonitorController --> MonitorControl
-    MonitorController --> WMI
+    DisplayController --> MonitorControl
+    DisplayController --> WMI
     UsbMonitor --> WMI
 ```
 
@@ -94,14 +94,14 @@ flowchart TB
 flowchart TD
     Entry["main.py"] --> QApplication["QApplication"]
     Entry --> Theme["ThemeService"]
-    Entry --> Monitor["WindowsMonitorController"]
+    Entry --> DisplayHardware["WindowsDisplayController"]
     Entry --> UsbHardware["WindowsUsbDeviceMonitor"]
     Entry --> Config["ConfigRepository<br/>shared app-scoped instance"]
 
     Config -->|"load / validate"| AppConfig["AppConfig + AppSettings"]
     AppConfig -->|"serialize"| ConfigFile["config.json"]
     Config --> Display["DisplayService"]
-    Monitor --> Display
+    DisplayHardware --> Display
 
     Config --> Usb["UsbService"]
     UsbHardware --> Usb
@@ -140,7 +140,7 @@ sequenceDiagram
     participant Monitor as UsbMonitorService
     participant Automation as AutomationService
     participant Display as DisplayService
-    participant Hardware as WindowsMonitorController
+    participant Hardware as WindowsDisplayController
     participant Log as ActivityRepository
 
     loop Every configured interval
@@ -259,7 +259,7 @@ classDiagram
 
 Monitor Switcher is a Windows desktop application with a layered architecture:
 
-- hardware layer: Windows USB and monitor discovery / control
+- hardware layer: Windows USB and display discovery / control
 - domain model layer: lightweight dataclasses describing displays, USB devices, automations, and events
 - service layer: repository access and business logic
 - UI layer: PySide6 pages and widgets
@@ -287,7 +287,7 @@ QtUsbMonitorAdapter (Qt timer + worker pool)
    -> AutomationService.handle_device_event()
    -> matches trigger
    -> DisplayService.switch_input()
-   -> WindowsMonitorController.switch_input()
+   -> WindowsDisplayController.switch_input()
    -> monitorcontrol input source change
 ```
 
@@ -299,7 +299,7 @@ The domain layer is intentionally small and centered on dataclasses.
 
 Defined in `app/models/display.py`.
 
-- `InputType` is an enum for supported monitor input families:
+- `InputType` is an enum for supported display input families:
   - HDMI
   - ANALOG
   - DVI
@@ -317,7 +317,7 @@ Defined in `app/models/display.py`.
   - `inputs`: list of supported inputs
   - `current_input`: last known active input
 
-This structure is persisted to `config.json` and used to map monitor IDs to actual hardware devices.
+This structure is persisted to `config.json` and used to map display IDs to actual hardware devices.
 
 ### 3.2 USB device models
 
@@ -425,22 +425,22 @@ The concrete implementation is `WindowsUsbDeviceMonitor` in `app/hardware/window
 
 It enumerates all present Windows PnP devices, filters those whose `DeviceID` starts with `USB\\`, and converts them into `UsbDevice` objects.
 
-### 5.2 Display monitor abstraction
+### 5.2 Display hardware abstraction
 
-Defined in `app/hardware/monitor.py`.
+Defined in `app/hardware/display.py`.
 
-- `MonitorController` defines `switch_input(display_id, input_id)`
+- `DisplayController` defines `switch_input(display_id, input_id)`
 - `DisplayDiscovery` defines `get_displays()`
 
-The concrete implementation is `WindowsMonitorController` in `app/hardware/windows_monitor.py`.
+The concrete implementation is `WindowsDisplayController` in `app/hardware/windows_display.py`.
 
 That class combines:
 
-- `win32com.client` to enumerate `Win32_PnPEntity` devices and locate matching monitors
-- `monitorcontrol` to query and change monitor input sources
-- a map of display IDs to live `monitorcontrol` monitor objects
+- `win32com.client` to enumerate `Win32_PnPEntity` devices and locate matching displays
+- `monitorcontrol` to query and change display input sources
+- a map of display IDs to live `monitorcontrol` display objects
 
-The controller supports reading available inputs for each monitor, detecting the current input, and switching the display to a selected source.
+The controller supports reading available inputs for each display, detecting the current input, and switching the display to a selected source.
 
 ## 6. Services layer
 
@@ -453,7 +453,7 @@ The controller supports reading available inputs for each monitor, detecting the
 - refreshing current input state
 - switching a display to a requested input
 
-This service keeps the UI and automation logic decoupled from the raw monitor APIs.
+This service keeps the UI and automation logic decoupled from the raw display APIs.
 
 ### 6.2 UsbService
 
@@ -547,7 +547,7 @@ The UI is designed to keep the core device and automation state in services whil
 The project uses the following packages:
 
 - `PySide6` for the desktop UI
-- `monitorcontrol` for monitor input enumeration and switching
+- `monitorcontrol` for display input enumeration and switching
 - `pywin32` for Windows COM / WMI access
 - `Pillow` for image support and UI-related utilities
 - `pystray` as a tray helper option in the project ecosystem
@@ -562,15 +562,15 @@ The project is intentionally narrow and practical, but a few design constraints 
 - the automation system currently watches only a single USB monitor loop in `main.py`
 - automation triggers are limited to device connect/disconnect
 - action types are limited to switching display inputs
-- display discovery depends on monitor enumeration behavior on each machine
+- display discovery depends on display enumeration behavior on each machine
 
 The architecture is structured to be expanded:
 
 - additional trigger types can be added to `TriggerType`
 - additional action types can be added to `ActionType`
-- new hardware adapters can be introduced behind the monitor/USB abstractions
+- new hardware adapters can be introduced behind the display/USB abstractions
 - more complex automation logic can be introduced in the service layer without changing the UI drastically
 
 ## 10. Summary
 
-Monitor Switcher is a small automation tool for Windows desktops that translates USB hardware events into monitor input changes. The architecture is intentionally simple: a hardware abstraction layer, a thin service layer, a dataclass-based domain model, and a PySide6 UI backed by config and SQLite persistence.
+Monitor Switcher is a small automation tool for Windows desktops that translates USB hardware events into display input changes. The architecture is intentionally simple: a hardware abstraction layer, a thin service layer, a dataclass-based domain model, and a PySide6 UI backed by config and SQLite persistence.

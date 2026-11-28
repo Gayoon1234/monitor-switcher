@@ -31,7 +31,7 @@ class FakeDisplayDiscovery:
         return list(self.displays)
 
 
-class FakeMonitorController:
+class FakeDisplayController:
     def __init__(self):
         self.set_displays_calls = []
         self.switch_input_calls = []
@@ -50,7 +50,7 @@ class FakeMonitorController:
 def create_display(
     *,
     display_id="display-001",
-    name="Test Monitor",
+    name="Test Display",
     windows_device_id="DISPLAY\\TEST",
     inputs=None,
     current_input=None,
@@ -71,10 +71,10 @@ def create_service(
 ):
     repository = FakeDisplayRepository(repository_displays)
     discovery = FakeDisplayDiscovery(discovered_displays)
-    controller = FakeMonitorController()
+    controller = FakeDisplayController()
 
     service = DisplayService(
-        monitor_controller=controller,
+        display_controller=controller,
         display_discovery=discovery,
         repository=repository,
     )
@@ -121,11 +121,11 @@ def test_discovers_and_saves_displays_when_repository_is_empty():
 
 def test_refresh_displays_discovers_saves_and_updates_controller():
     initial_display = create_display(
-        name="Old Monitor",
+        name="Old Display",
         windows_device_id="DISPLAY\\OLD",
     )
     refreshed_display = create_display(
-        name="New Monitor",
+        name="New Display",
         windows_device_id="DISPLAY\\NEW",
     )
 
@@ -148,7 +148,7 @@ def test_refresh_displays_discovers_saves_and_updates_controller():
 
 def test_refresh_displays_updates_current_inputs():
     saved_display = create_display(
-        name="Test Monitor",
+        name="Test Display",
         windows_device_id="DISPLAY\\TEST",
         current_input=None,
         inputs=[
@@ -157,7 +157,7 @@ def test_refresh_displays_updates_current_inputs():
     )
 
     live_display = create_display(
-        name="Test Monitor",
+        name="Test Display",
         windows_device_id="DISPLAY\\TEST",
         current_input="HDMI1",
         inputs=[
@@ -209,7 +209,7 @@ def test_switch_input_does_not_update_display_when_controller_fails():
         discovered_displays=[display],
     )
 
-    controller.error = RuntimeError("Monitor unavailable")
+    controller.error = RuntimeError("Display unavailable")
 
     try:
         service.switch_input("display-001", "ANALOG1")

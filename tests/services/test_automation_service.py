@@ -338,7 +338,7 @@ def test_failed_action_creates_failed_activity_event():
         [automation]
     )
 
-    display_service.error = RuntimeError("Monitor unavailable")
+    display_service.error = RuntimeError("Display unavailable")
 
     service.handle_device_event(
         DeviceEvent(
@@ -356,7 +356,7 @@ def test_failed_action_creates_failed_activity_event():
     assert failed_event.event_type == "action"
     assert failed_event.success is False
     assert "Failed to switch" in failed_event.message
-    assert "Monitor unavailable" in failed_event.message
+    assert "Display unavailable" in failed_event.message
 
 
 def test_failed_action_does_not_prevent_later_actions():
@@ -385,7 +385,7 @@ def test_failed_action_does_not_prevent_later_actions():
             self.calls.append((display_id, input_id))
 
             if display_id == "display-001":
-                raise RuntimeError("First monitor unavailable")
+                raise RuntimeError("First display unavailable")
 
     display_service = SelectiveFailureDisplayService()
     repository = FakeActivityRepository()

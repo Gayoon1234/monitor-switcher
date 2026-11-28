@@ -112,7 +112,7 @@ def test_find_device_keeps_usb_cards_in_scrollable_content(qapp):
 def test_display_card_disables_input_selector_when_no_inputs(qapp):
     display = Display(
         id="display-1",
-        name="Main Monitor",
+        name="Main Display",
         windows_device_id="DISPLAY\\MONITOR",
         inputs=[],
     )

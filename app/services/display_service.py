@@ -1,4 +1,4 @@
-from app.hardware.monitor import DisplayDiscovery, MonitorController
+from app.hardware.display import DisplayController, DisplayDiscovery
 from app.models.config import ConfigKey
 from app.models.display import Display
 from app.services.config_repository import ConfigRepository
@@ -8,11 +8,11 @@ class DisplayService:
 
     def __init__(
         self,
-        monitor_controller: MonitorController,
+        display_controller: DisplayController,
         display_discovery: DisplayDiscovery,
         repository: ConfigRepository,
     ):
-        self.monitor_controller = monitor_controller
+        self.display_controller = display_controller
         self.display_discovery = display_discovery
         self.repository = repository
         self.displays: list[Display] = []
@@ -27,7 +27,7 @@ class DisplayService:
             self._refresh_current_inputs()
 
         self._rebuild_display_lookup()
-        self.monitor_controller.set_displays(self.displays)
+        self.display_controller.set_displays(self.displays)
         self._unsubscribe_config = self.repository.config_changed.subscribe(
             self._on_config_changed
         )
@@ -50,7 +50,7 @@ class DisplayService:
     ) -> None:
         display = self._find_display(display_id)
 
-        self.monitor_controller.switch_input(
+        self.display_controller.switch_input(
             display_id,
             input_id,
         )
@@ -89,4 +89,4 @@ class DisplayService:
 
         self.displays = self.repository.get_config(ConfigKey.DISPLAYS)
         self._rebuild_display_lookup()
-        self.monitor_controller.set_displays(self.displays)
+        self.display_controller.set_displays(self.displays)

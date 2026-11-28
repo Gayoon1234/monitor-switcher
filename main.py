@@ -4,7 +4,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from app.adapters.qt.usb_monitor_adapter import QtUsbMonitorAdapter
-from app.hardware.windows_monitor import WindowsMonitorController
+from app.hardware.windows_display import WindowsDisplayController
 from app.hardware.windows_usb import WindowsUsbDeviceMonitor
 from app.services.activity_repository import ActivityRepository
 from app.services.automation_service import AutomationService
@@ -36,7 +36,7 @@ app.setStyleSheet(theme_service.get_stylesheet())
 # -------------------------
 # Hardware
 # -------------------------
-monitor_controller = WindowsMonitorController()
+display_controller = WindowsDisplayController()
 usb_monitor = WindowsUsbDeviceMonitor()
 
 
@@ -46,8 +46,8 @@ usb_monitor = WindowsUsbDeviceMonitor()
 repository = ConfigRepository()
 
 display_service = DisplayService(
-    monitor_controller=monitor_controller,
-    display_discovery=monitor_controller,
+    display_controller=display_controller,
+    display_discovery=display_controller,
     repository=repository,
 )
 
