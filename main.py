@@ -83,12 +83,9 @@ usb_monitor_adapter = QtUsbMonitorAdapter(
     parent=app,
 )
 
-usb_monitor_enabled = repository.get_config(ConfigKey.USB_MONITOR_ENABLED)
-usb_monitor_interval_ms = repository.get_config(
-    ConfigKey.USB_MONITOR_INTERVAL_MS
-)
-if usb_monitor_enabled:
-    usb_monitor_adapter.start(usb_monitor_interval_ms)
+settings = repository.get_config(ConfigKey.SETTINGS)
+if settings.usb_monitor_enabled:
+    usb_monitor_adapter.start(settings.usb_monitor_interval_ms)
 
 
 # -------------------------

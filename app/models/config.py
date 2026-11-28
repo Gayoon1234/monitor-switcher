@@ -17,10 +17,7 @@ class ConfigKey(Enum):
     AUTOMATIONS = "automations"
     DISPLAYS = "displays"
     USB_DEVICES = "usb_devices"
-    ACTIVITY_DAYS = "activity_days"
-    STORE_ACTIVITY_LOGS = "store_activity_logs"
-    USB_MONITOR_ENABLED = "usb_monitor_enabled"
-    USB_MONITOR_INTERVAL_MS = "usb_monitor_interval_ms"
+    SETTINGS = "settings"
 
 
 @dataclass

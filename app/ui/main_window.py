@@ -90,7 +90,8 @@ class MainWindow(QMainWindow):
         )
         self.pages.addWidget(self.automations_page)
         
-        activity_days = self.repository.get_config(ConfigKey.ACTIVITY_DAYS)
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        activity_days = settings.activity_days
         self.activity_page = ActivityPage(
             activity_history=self.automation_service.get_activity_history(
                 activity_days
@@ -107,18 +108,10 @@ class MainWindow(QMainWindow):
                 self.theme_service,
                 activity_days=activity_days,
                 activity_logging_paused=(
-                    self.automation_service.activity_logging_paused
+                    not settings.store_activity_logs
                 ),
-                usb_monitor_enabled=(
-                    self.repository.get_config(
-                        ConfigKey.USB_MONITOR_ENABLED
-                    )
-                ),
-                usb_monitor_interval_ms=(
-                    self.repository.get_config(
-                        ConfigKey.USB_MONITOR_INTERVAL_MS
-                    )
-                ),
+                usb_monitor_enabled=settings.usb_monitor_enabled,
+                usb_monitor_interval_ms=settings.usb_monitor_interval_ms,
             )
             self.settings_page.theme_changed.connect(
                 self._set_active_theme
@@ -174,40 +167,39 @@ class MainWindow(QMainWindow):
             )
 
     def _set_activity_period(self, days):
-        self.repository.update_config(ConfigKey.ACTIVITY_DAYS, days)
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        settings.activity_days = days
+        self.repository.update_config(ConfigKey.SETTINGS, settings)
         self.activity_page.days = days
         self.activity_page.set_events(
             self.automation_service.get_activity_history(days)
         )
 
     def _set_activity_logging_paused(self, paused):
-        self.repository.update_config(
-            ConfigKey.STORE_ACTIVITY_LOGS,
-            not paused,
-        )
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        settings.store_activity_logs = not paused
+        self.repository.update_config(ConfigKey.SETTINGS, settings)
 
     def _set_usb_monitor_enabled(self, enabled):
-        self.repository.update_config(
-            ConfigKey.USB_MONITOR_ENABLED,
-            enabled,
-        )
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        settings.usb_monitor_enabled = enabled
+        self.repository.update_config(ConfigKey.SETTINGS, settings)
         if self.usb_monitor_adapter is None:
             return
 
         if enabled:
             self.usb_monitor_adapter.start(
                 self.repository.get_config(
-                    ConfigKey.USB_MONITOR_INTERVAL_MS
-                )
+                    ConfigKey.SETTINGS
+                ).usb_monitor_interval_ms
             )
         else:
             self.usb_monitor_adapter.stop()
 
     def _set_usb_monitor_interval(self, interval_ms):
-        self.repository.update_config(
-            ConfigKey.USB_MONITOR_INTERVAL_MS,
-            interval_ms,
-        )
+        settings = self.repository.get_config(ConfigKey.SETTINGS)
+        settings.usb_monitor_interval_ms = interval_ms
+        self.repository.update_config(ConfigKey.SETTINGS, settings)
         if self.usb_monitor_adapter is not None:
             self.usb_monitor_adapter.set_interval(interval_ms)
 

@@ -5,7 +5,7 @@ from typing import Literal, Protocol, TypeVar, cast, overload
 
 from app.events import EventHook
 from app.models.automation import Automation
-from app.models.config import AppConfig, ConfigKey
+from app.models.config import AppConfig, AppSettings, ConfigKey
 from app.models.display import Display
 from app.models.usb_device import ConfiguredUsbDevice
 
@@ -45,26 +45,8 @@ class ConfigRepository:
     @overload
     def get_config(
         self,
-        key: Literal[ConfigKey.ACTIVITY_DAYS],
-    ) -> int | None: ...
-
-    @overload
-    def get_config(
-        self,
-        key: Literal[ConfigKey.STORE_ACTIVITY_LOGS],
-    ) -> bool: ...
-
-    @overload
-    def get_config(
-        self,
-        key: Literal[ConfigKey.USB_MONITOR_ENABLED],
-    ) -> bool: ...
-
-    @overload
-    def get_config(
-        self,
-        key: Literal[ConfigKey.USB_MONITOR_INTERVAL_MS],
-    ) -> int: ...
+        key: Literal[ConfigKey.SETTINGS],
+    ) -> AppSettings: ...
 
     def get_config(self, key: ConfigKey) -> object:
         config = self._load()
@@ -74,14 +56,8 @@ class ConfigRepository:
             value = config.displays
         elif key is ConfigKey.USB_DEVICES:
             value = config.usb_devices
-        elif key is ConfigKey.ACTIVITY_DAYS:
-            value = config.settings.activity_days
-        elif key is ConfigKey.STORE_ACTIVITY_LOGS:
-            value = config.settings.store_activity_logs
-        elif key is ConfigKey.USB_MONITOR_ENABLED:
-            value = config.settings.usb_monitor_enabled
-        elif key is ConfigKey.USB_MONITOR_INTERVAL_MS:
-            value = config.settings.usb_monitor_interval_ms
+        elif key is ConfigKey.SETTINGS:
+            value = config.settings
         else:
             raise ValueError(f"Unsupported configuration key: {key}")
         return deepcopy(value)
@@ -110,29 +86,8 @@ class ConfigRepository:
     @overload
     def update_config(
         self,
-        key: Literal[ConfigKey.ACTIVITY_DAYS],
-        value: int | None,
-    ) -> None: ...
-
-    @overload
-    def update_config(
-        self,
-        key: Literal[ConfigKey.STORE_ACTIVITY_LOGS],
-        value: bool,
-    ) -> None: ...
-
-    @overload
-    def update_config(
-        self,
-        key: Literal[ConfigKey.USB_MONITOR_ENABLED],
-        value: bool,
-    ) -> None: ...
-
-    @overload
-    def update_config(
-        self,
-        key: Literal[ConfigKey.USB_MONITOR_INTERVAL_MS],
-        value: int,
+        key: Literal[ConfigKey.SETTINGS],
+        value: AppSettings,
     ) -> None: ...
 
     def update_config(self, key: ConfigKey, value: object) -> None:
@@ -152,31 +107,11 @@ class ConfigRepository:
                 ConfiguredUsbDevice,
                 key,
             )
-        elif key is ConfigKey.ACTIVITY_DAYS:
-            if value is not None and (
-                not isinstance(value, int) or isinstance(value, bool)
-            ):
-                raise TypeError("activity_days must be an integer or None.")
-            config.settings.activity_days = value
-        elif key is ConfigKey.STORE_ACTIVITY_LOGS:
-            if not isinstance(value, bool):
-                raise TypeError(f"{key.value} must be a boolean.")
-            config.settings.store_activity_logs = value
-        elif key is ConfigKey.USB_MONITOR_ENABLED:
-            if not isinstance(value, bool):
-                raise TypeError(f"{key.value} must be a boolean.")
-            config.settings.usb_monitor_enabled = value
-        elif key is ConfigKey.USB_MONITOR_INTERVAL_MS:
-            if (
-                not isinstance(value, int)
-                or isinstance(value, bool)
-                or not 1 <= value <= 2_147_483_647
-            ):
-                raise ValueError(
-                    "USB monitor polling interval must be between 1 and "
-                    "2147483647 milliseconds."
-                )
-            config.settings.usb_monitor_interval_ms = value
+        elif key is ConfigKey.SETTINGS:
+            if not isinstance(value, AppSettings):
+                raise TypeError("settings must be an AppSettings object.")
+            _validate_settings(value)
+            config.settings = deepcopy(value)
         else:
             raise ValueError(f"Unsupported configuration key: {key}")
 
@@ -337,3 +272,24 @@ def _without_id(
 ) -> list[ConfigItem] | None:
     updated = [item for item in items if item.id != identifier]
     return updated if len(updated) != len(items) else None
+
+
+def _validate_settings(settings: AppSettings) -> None:
+    if settings.activity_days is not None and (
+        not isinstance(settings.activity_days, int)
+        or isinstance(settings.activity_days, bool)
+    ):
+        raise TypeError("activity_days must be an integer or None.")
+    if not isinstance(settings.store_activity_logs, bool):
+        raise TypeError("store_activity_logs must be a boolean.")
+    if not isinstance(settings.usb_monitor_enabled, bool):
+        raise TypeError("usb_monitor_enabled must be a boolean.")
+    if (
+        not isinstance(settings.usb_monitor_interval_ms, int)
+        or isinstance(settings.usb_monitor_interval_ms, bool)
+        or not 1 <= settings.usb_monitor_interval_ms <= 2_147_483_647
+    ):
+        raise ValueError(
+            "USB monitor polling interval must be between 1 and "
+            "2147483647 milliseconds."
+        )

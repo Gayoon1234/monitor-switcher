@@ -7,7 +7,7 @@ from app.models.automation import (
     Trigger,
     TriggerType,
 )
-from app.models.config import ConfigKey
+from app.models.config import AppSettings, ConfigKey
 from app.models.device_event import DeviceEvent, DeviceEventType
 from app.services.automation_service import AutomationService
 
@@ -44,21 +44,21 @@ class FakeActivityRepository:
 class FakeConfigRepository:
     def __init__(self, automations, store_activity_logs=True):
         self.automations = list(automations)
-        self.store_activity_logs = store_activity_logs
+        self.settings = AppSettings(store_activity_logs=store_activity_logs)
         self.config_changed = EventHook()
 
     def get_config(self, key):
         if key is ConfigKey.AUTOMATIONS:
             return list(self.automations)
-        if key is ConfigKey.STORE_ACTIVITY_LOGS:
-            return self.store_activity_logs
+        if key is ConfigKey.SETTINGS:
+            return self.settings
         raise AssertionError(f"Unexpected config key: {key}")
 
     def update_config(self, key, value):
         if key is ConfigKey.AUTOMATIONS:
             self.automations = list(value)
-        elif key is ConfigKey.STORE_ACTIVITY_LOGS:
-            self.store_activity_logs = value
+        elif key is ConfigKey.SETTINGS:
+            self.settings = value
         else:
             raise AssertionError(f"Unexpected config key: {key}")
         self.config_changed.emit(key)
@@ -485,8 +485,8 @@ def test_config_changes_update_automations_and_activity_logging():
         [replacement_automation],
     )
     service.config_repository.update_config(
-        ConfigKey.STORE_ACTIVITY_LOGS,
-        False,
+        ConfigKey.SETTINGS,
+        AppSettings(store_activity_logs=False),
     )
 
     assert service.automations == [replacement_automation]

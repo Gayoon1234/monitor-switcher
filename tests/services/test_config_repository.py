@@ -9,7 +9,7 @@ from app.models.automation import (
     Trigger,
     TriggerType,
 )
-from app.models.config import AppConfig, ConfigKey
+from app.models.config import AppConfig, AppSettings, ConfigKey
 from app.models.display import Display, DisplayInput, InputType
 from app.models.usb_device import ConfiguredUsbDevice
 from app.services.config_repository import ConfigRepository
@@ -121,20 +121,29 @@ def test_update_config_persists_values_and_returns_isolated_copies(tmp_path):
     repository = ConfigRepository(config_path)
     automations = [make_automation()]
     repository.update_config(ConfigKey.AUTOMATIONS, automations)
-    repository.update_config(ConfigKey.ACTIVITY_DAYS, 7)
-    repository.update_config(ConfigKey.STORE_ACTIVITY_LOGS, False)
-    repository.update_config(ConfigKey.USB_MONITOR_ENABLED, False)
-    repository.update_config(ConfigKey.USB_MONITOR_INTERVAL_MS, 1250)
+    repository.update_config(
+        ConfigKey.SETTINGS,
+        AppSettings(
+            activity_days=7,
+            store_activity_logs=False,
+            usb_monitor_enabled=False,
+            usb_monitor_interval_ms=1250,
+        ),
+    )
 
     returned_automations = repository.get_config(ConfigKey.AUTOMATIONS)
     returned_automations.clear()
+    returned_settings = repository.get_config(ConfigKey.SETTINGS)
+    returned_settings.activity_days = 90
 
     reloaded = ConfigRepository(config_path)
     assert reloaded.get_config(ConfigKey.AUTOMATIONS) == [make_automation()]
-    assert reloaded.get_config(ConfigKey.ACTIVITY_DAYS) == 7
-    assert reloaded.get_config(ConfigKey.STORE_ACTIVITY_LOGS) is False
-    assert reloaded.get_config(ConfigKey.USB_MONITOR_ENABLED) is False
-    assert reloaded.get_config(ConfigKey.USB_MONITOR_INTERVAL_MS) == 1250
+    assert reloaded.get_config(ConfigKey.SETTINGS) == AppSettings(
+        activity_days=7,
+        store_activity_logs=False,
+        usb_monitor_enabled=False,
+        usb_monitor_interval_ms=1250,
+    )
 
 
 def test_settings_default_values_and_legacy_migration(tmp_path):
@@ -145,12 +154,16 @@ def test_settings_default_values_and_legacy_migration(tmp_path):
     )
     repository = ConfigRepository(config_path)
 
-    assert repository.get_config(ConfigKey.ACTIVITY_DAYS) == 7
-    assert repository.get_config(ConfigKey.STORE_ACTIVITY_LOGS) is True
-    assert repository.get_config(ConfigKey.USB_MONITOR_ENABLED) is True
-    assert repository.get_config(ConfigKey.USB_MONITOR_INTERVAL_MS) == 500
+    assert repository.get_config(ConfigKey.SETTINGS) == AppSettings(
+        activity_days=7,
+        store_activity_logs=True,
+        usb_monitor_enabled=True,
+        usb_monitor_interval_ms=500,
+    )
 
-    repository.update_config(ConfigKey.ACTIVITY_DAYS, 30)
+    settings = repository.get_config(ConfigKey.SETTINGS)
+    settings.activity_days = 30
+    repository.update_config(ConfigKey.SETTINGS, settings)
     data = json.loads(config_path.read_text(encoding="utf-8"))
     assert data["settings"] == {
         "activity_days": 30,
@@ -164,9 +177,11 @@ def test_settings_default_values_and_legacy_migration(tmp_path):
 
 def test_activity_days_can_be_none(tmp_path):
     repository = ConfigRepository(tmp_path / "config.json")
-    repository.update_config(ConfigKey.ACTIVITY_DAYS, None)
+    settings = repository.get_config(ConfigKey.SETTINGS)
+    settings.activity_days = None
+    repository.update_config(ConfigKey.SETTINGS, settings)
 
-    assert repository.get_config(ConfigKey.ACTIVITY_DAYS) is None
+    assert repository.get_config(ConfigKey.SETTINGS).activity_days is None
 
 
 def test_invalid_config_types_are_rejected(tmp_path):
@@ -177,18 +192,17 @@ def test_invalid_config_types_are_rejected(tmp_path):
     )
 
     with pytest.raises(ValueError, match="must be a boolean"):
-        ConfigRepository(config_path).get_config(
-            ConfigKey.USB_MONITOR_ENABLED
-        )
+        ConfigRepository(config_path).get_config(ConfigKey.SETTINGS)
 
 
 def test_usb_monitor_interval_requires_positive_integer(tmp_path):
     repository = ConfigRepository(tmp_path / "config.json")
 
     with pytest.raises(ValueError, match="polling interval"):
-        repository.update_config(ConfigKey.USB_MONITOR_INTERVAL_MS, 0)
-    with pytest.raises(ValueError, match="polling interval"):
-        repository.update_config(ConfigKey.USB_MONITOR_INTERVAL_MS, True)
+        repository.update_config(
+            ConfigKey.SETTINGS,
+            AppSettings(usb_monitor_interval_ms=0),
+        )
 
 
 def test_invalid_json_is_reported(tmp_path):

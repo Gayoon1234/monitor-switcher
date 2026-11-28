@@ -338,7 +338,7 @@ The activity log is written to SQLite so the UI can present a time-bounded event
 
 `ConfigRepository` in `app/services/config_repository.py` saves and loads the app's state from `config.json`.
 
-`main.py` creates one app-scoped repository and injects it into services and UI components. `AppConfig` and `AppSettings` in `app/models/config.py` model the persisted data, while `ConfigKey` selects a typed collection or setting.
+`main.py` creates one app-scoped repository and injects it into services and UI components. `AppConfig` and `AppSettings` in `app/models/config.py` model the persisted data, while `ConfigKey` selects a typed collection or the complete settings object.
 
 The repository provides typed `get_config`, `update_config`, `add_config`, and `remove_config` operations. Collection operations validate their model types and use stable IDs for removal. Updates are persisted before a `config_changed` event is emitted, allowing services and UI components to refresh without keeping stale startup snapshots.
 

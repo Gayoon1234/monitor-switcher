@@ -28,8 +28,8 @@ class AutomationService:
             ConfigKey.AUTOMATIONS
         )
         self.activity_logging_paused = not config_repository.get_config(
-            ConfigKey.STORE_ACTIVITY_LOGS
-        )
+            ConfigKey.SETTINGS
+        ).store_activity_logs
         self.activity_events: EventHook[ActivityEvent] = EventHook()
         self._unsubscribe_config = config_repository.config_changed.subscribe(
             self._on_config_changed
@@ -43,10 +43,10 @@ class AutomationService:
             self.automations = self.config_repository.get_config(
                 ConfigKey.AUTOMATIONS
             )
-        elif key is ConfigKey.STORE_ACTIVITY_LOGS:
+        elif key is ConfigKey.SETTINGS:
             self.activity_logging_paused = not self.config_repository.get_config(
-                ConfigKey.STORE_ACTIVITY_LOGS
-            )
+                ConfigKey.SETTINGS
+            ).store_activity_logs
 
     def handle_device_event(self, event: DeviceEvent) -> None:
         for automation in self.automations:
