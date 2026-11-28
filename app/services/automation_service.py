@@ -4,8 +4,10 @@ from datetime import datetime
 from app.events import EventHook
 from app.models.activity_event import ActivityEvent
 from app.models.automation import ActionType, Automation, TriggerType
+from app.models.config import ConfigKey
 from app.models.device_event import DeviceEvent, DeviceEventType
 from app.services.activity_repository import ActivityRepository
+from app.services.config_repository import ConfigRepository
 from app.services.display_service import DisplayService
 
 
@@ -17,14 +19,34 @@ class AutomationService:
         self,
         display_service: DisplayService,
         activity_repository: ActivityRepository,
-        automations: list[Automation],
-        store_activity_logs: bool = True,
+        config_repository: ConfigRepository,
     ):
         self.display_service = display_service
         self.activity_repository = activity_repository
-        self.automations = automations
-        self.activity_logging_paused = not store_activity_logs
+        self.config_repository = config_repository
+        self.automations = config_repository.get_config(
+            ConfigKey.AUTOMATIONS
+        )
+        self.activity_logging_paused = not config_repository.get_config(
+            ConfigKey.STORE_ACTIVITY_LOGS
+        )
         self.activity_events: EventHook[ActivityEvent] = EventHook()
+        self._unsubscribe_config = config_repository.config_changed.subscribe(
+            self._on_config_changed
+        )
+
+    def close(self) -> None:
+        self._unsubscribe_config()
+
+    def _on_config_changed(self, key: ConfigKey) -> None:
+        if key is ConfigKey.AUTOMATIONS:
+            self.automations = self.config_repository.get_config(
+                ConfigKey.AUTOMATIONS
+            )
+        elif key is ConfigKey.STORE_ACTIVITY_LOGS:
+            self.activity_logging_paused = not self.config_repository.get_config(
+                ConfigKey.STORE_ACTIVITY_LOGS
+            )
 
     def handle_device_event(self, event: DeviceEvent) -> None:
         for automation in self.automations:

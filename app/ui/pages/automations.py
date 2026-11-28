@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.models.config import ConfigKey
 from app.ui.widgets.automations_card import AutomationCard
 from app.ui.widgets.automation_editor import AutomationEditor
 
@@ -28,8 +29,18 @@ class AutomationsPage(QWidget):
         self.repository = repository
         self.display_service = display_service
         self.usb_service = usb_service
+        self._unsubscribe_config = self.repository.config_changed.subscribe(
+            self._on_config_changed
+        )
 
         self._setup_ui()
+
+    def close(self) -> None:
+        self._unsubscribe_config()
+
+    def _on_config_changed(self, key: ConfigKey) -> None:
+        if key is ConfigKey.AUTOMATIONS:
+            self._refresh_automations()
 
     def _setup_ui(self):
         page_layout = QVBoxLayout(self)
@@ -97,7 +108,7 @@ class AutomationsPage(QWidget):
             if widget is not None and widget is not self.empty_state:
                 widget.deleteLater()
 
-        automations = self.repository.load_automations()
+        automations = self.repository.get_config(ConfigKey.AUTOMATIONS)
         enabled_count = sum(automation.enabled for automation in automations)
         count = len(automations)
         if count == 0:
@@ -133,15 +144,14 @@ class AutomationsPage(QWidget):
             return
 
         updated_automation = editor.get_automation()
-        automations = self.repository.load_automations()
+        automations = self.repository.get_config(ConfigKey.AUTOMATIONS)
 
         for index, existing_automation in enumerate(automations):
             if existing_automation.id == updated_automation.id:
                 automations[index] = updated_automation
                 break
 
-        self.repository.save_automations(automations)
-        self._refresh_automations()
+        self.repository.update_config(ConfigKey.AUTOMATIONS, automations)
 
     def _delete_automation(self, automation):
         result = QMessageBox.question(
@@ -156,15 +166,10 @@ class AutomationsPage(QWidget):
         if result != QMessageBox.StandardButton.Yes:
             return
 
-        automations = self.repository.load_automations()
-        automations = [
-            existing_automation
-            for existing_automation in automations
-            if existing_automation.id != automation.id
-        ]
-
-        self.repository.save_automations(automations)
-        self._refresh_automations()
+        self.repository.remove_config(
+            ConfigKey.AUTOMATIONS,
+            automation.id,
+        )
 
     def _add_automation(self):
         editor = AutomationEditor(
@@ -177,12 +182,10 @@ class AutomationsPage(QWidget):
             return
 
         automation = editor.get_automation()
-        automations = self.repository.load_automations()
-        automation.id = self._get_next_automation_id(automations)
-        automations.append(automation)
-
-        self.repository.save_automations(automations)
-        self._refresh_automations()
+        automation.id = self._get_next_automation_id(
+            self.repository.get_config(ConfigKey.AUTOMATIONS)
+        )
+        self.repository.add_config(ConfigKey.AUTOMATIONS, automation)
 
     def _get_next_automation_id(self, automations):
         existing_ids = {

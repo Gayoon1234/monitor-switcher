@@ -28,7 +28,7 @@ flowchart TB
     end
 
     subgraph Domain["Domain Models"]
-        Models["Display / UsbDevice / Automation / Events"]
+        Models["AppConfig / AppSettings / ConfigKey / Display / UsbDevice / Automation / Events"]
     end
 
     subgraph Persistence["Persistence"]
@@ -98,12 +98,11 @@ flowchart TD
     Config --> Usb["UsbService"]
     UsbHardware --> Usb
 
-    Config --> Automations["Loaded automations"]
     Entry --> Activity["ActivityRepository"]
-    Automations --> Automation["AutomationService"]
+    Config --> Automation["AutomationService"]
     Display --> Automation
     Activity --> Automation
-    Config -->|"store activity + polling settings"| Entry
+    Config -->|"USB monitoring settings"| Entry
 
     UsbHardware --> QtUsb["QtUsbMonitorAdapter"]
     Entry --> MonitorService["UsbMonitorService"]
@@ -339,13 +338,17 @@ The activity log is written to SQLite so the UI can present a time-bounded event
 
 `ConfigRepository` in `app/services/config_repository.py` saves and loads the app's state from `config.json`.
 
-It handles three collections:
+`main.py` creates one app-scoped repository and injects it into services and UI components. `AppConfig` and `AppSettings` in `app/models/config.py` model the persisted data, while `ConfigKey` selects a typed collection or setting.
+
+The repository provides typed `get_config`, `update_config`, `add_config`, and `remove_config` operations. Collection operations validate their model types and use stable IDs for removal. Updates are persisted before a `config_changed` event is emitted, allowing services and UI components to refresh without keeping stale startup snapshots.
+
+The JSON document contains these collections:
 
 - `usb_devices`
 - `automations`
 - `displays`
 
-The repository converts dataclasses to dictionaries for JSON serialization and rehydrates them when the app starts.
+It also stores application settings under `settings`. The `AppConfig` model validates JSON values and converts between the typed models and the persisted document.
 
 ### 4.2 SQLite activity log
 

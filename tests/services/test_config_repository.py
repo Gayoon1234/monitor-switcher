@@ -1,5 +1,4 @@
 import json
-from dataclasses import asdict
 
 import pytest
 
@@ -10,339 +9,191 @@ from app.models.automation import (
     Trigger,
     TriggerType,
 )
-from app.models.display import (
-    Display,
-    DisplayInput,
-    InputType,
-)
+from app.models.config import AppConfig, ConfigKey
+from app.models.display import Display, DisplayInput, InputType
 from app.models.usb_device import ConfiguredUsbDevice
 from app.services.config_repository import ConfigRepository
 
 
-def test_load_usb_devices(tmp_path):
-    config_path = tmp_path / "config.json"
-
-    usb_devices = [
-        ConfiguredUsbDevice(
-            id="device1",
-            windows_device_id="USB\\TEST_DEVICE",
-            nickname="Test Device",
-        )
-    ]
-
-    data = {
-        "usb_devices": [asdict(device) for device in usb_devices]
-    }
-
-    config_path.write_text(
-        json.dumps(data, indent=4),
-        encoding="utf-8",
+def make_automation(automation_id="automation-1"):
+    return Automation(
+        id=automation_id,
+        name="Test Automation",
+        enabled=True,
+        trigger=Trigger(TriggerType.DEVICE_CONNECTED, "device-1"),
+        actions=[
+            Action(
+                ActionType.SWITCH_INPUT,
+                display_id="display-1",
+                input_id="HDMI1",
+            )
+        ],
     )
 
-    repository = ConfigRepository(path=config_path)
 
-    loaded_devices = repository.load_usb_devices()
+def make_display(display_id="display-1"):
+    return Display(
+        id=display_id,
+        name="Test Display",
+        windows_device_id="DISPLAY\\TEST",
+        inputs=[DisplayInput("HDMI1", InputType.HDMI)],
+    )
 
-    assert loaded_devices == usb_devices
+
+def make_usb_device(device_id="device-1"):
+    return ConfiguredUsbDevice(
+        id=device_id,
+        windows_device_id="USB\\TEST",
+        nickname="Test Device",
+    )
 
 
-def test_save_usb_devices(tmp_path):
+def test_get_config_loads_typed_models(tmp_path):
     config_path = tmp_path / "config.json"
-
-    usb_devices = [
-        ConfiguredUsbDevice(
-            id="device1",
-            windows_device_id="USB\\TEST_DEVICE",
-            nickname="Test Device",
-        )
-    ]
-
-    repository = ConfigRepository(path=config_path)
-
-    repository.save_usb_devices(usb_devices)
-
-    data = json.loads(config_path.read_text(encoding="utf-8"))
-
-    assert data["usb_devices"] == [
-        asdict(device)
-        for device in usb_devices
-    ]
-
-
-def test_load_automations(tmp_path):
-    config_path = tmp_path / "config.json"
-
-    automations = [
-        Automation(
-            id="automation1",
-            name="Test Automation",
-            enabled=True,
-            trigger=Trigger(
-                type=TriggerType.DEVICE_CONNECTED,
-                device_id="device1",
-            ),
-            actions=[
-                Action(
-                    type=ActionType.SWITCH_INPUT,
-                    display_id="display1",
-                    input_id="HDMI1",
-                )
-            ],
-        )
-    ]
-
-    data = {
-        "automations": [
+    config_path.write_text(
+        json.dumps(
             {
-                "id": automation.id,
-                "name": automation.name,
-                "enabled": automation.enabled,
-                "trigger": {
-                    "type": automation.trigger.type.value,
-                    "device_id": automation.trigger.device_id,
-                },
-                "actions": [
+                "automations": AppConfig(
+                    automations=[make_automation()]
+                ).to_dict()["automations"],
+                "displays": AppConfig(
+                    displays=[make_display()]
+                ).to_dict()["displays"],
+                "usb_devices": [
                     {
-                        "type": action.type.value,
-                        "display_id": action.display_id,
-                        "input_id": action.input_id,
+                        "id": "device-1",
+                        "windows_device_id": "USB\\TEST",
+                        "nickname": "Test Device",
                     }
-                    for action in automation.actions
                 ],
             }
-            for automation in automations
-        ]
-    }
-
-    config_path.write_text(
-        json.dumps(data, indent=4),
+        ),
         encoding="utf-8",
     )
+    repository = ConfigRepository(config_path)
 
-    repository = ConfigRepository(path=config_path)
-
-    loaded_automations = repository.load_automations()
-
-    assert loaded_automations == automations
-
-
-def test_save_automations(tmp_path):
-    config_path = tmp_path / "config.json"
-
-    automations = [
-        Automation(
-            id="automation1",
-            name="Test Automation",
-            enabled=True,
-            trigger=Trigger(
-                type=TriggerType.DEVICE_CONNECTED,
-                device_id="device1",
-            ),
-            actions=[
-                Action(
-                    type=ActionType.SWITCH_INPUT,
-                    display_id="display1",
-                    input_id="HDMI1",
-                )
-            ],
-        )
+    assert repository.get_config(ConfigKey.AUTOMATIONS) == [
+        make_automation()
     ]
-
-    repository = ConfigRepository(path=config_path)
-
-    repository.save_automations(automations)
-
-    data = json.loads(config_path.read_text(encoding="utf-8"))
-
-    assert data["automations"] == [
-        {
-            "id": automation.id,
-            "name": automation.name,
-            "enabled": automation.enabled,
-            "trigger": {
-                "type": automation.trigger.type.value,
-                "device_id": automation.trigger.device_id,
-            },
-            "actions": [
-                {
-                    "type": action.type.value,
-                    "display_id": action.display_id,
-                    "input_id": action.input_id,
-                }
-                for action in automation.actions
-            ],
-        }
-        for automation in automations
+    assert repository.get_config(ConfigKey.DISPLAYS) == [make_display()]
+    assert repository.get_config(ConfigKey.USB_DEVICES) == [
+        make_usb_device()
     ]
 
 
-def test_load_displays(tmp_path):
-    config_path = tmp_path / "config.json"
+def test_add_and_remove_config_items_persist_and_notify(tmp_path):
+    repository = ConfigRepository(tmp_path / "config.json")
+    changes = []
+    repository.config_changed.subscribe(changes.append)
 
-    displays = [
-        Display(
-            id="display1",
-            name="Test Display",
-            windows_device_id="DISPLAY\\TEST",
-            inputs=[
-                DisplayInput(
-                    input_id="HDMI1",
-                    input_type=InputType.HDMI,
-                )
-            ],
-        )
+    repository.add_config(ConfigKey.DISPLAYS, make_display())
+    repository.add_config(ConfigKey.USB_DEVICES, make_usb_device())
+
+    assert repository.remove_config(ConfigKey.DISPLAYS, "display-1")
+    assert repository.remove_config(ConfigKey.USB_DEVICES, "device-1")
+    assert not repository.remove_config(ConfigKey.USB_DEVICES, "missing")
+    assert changes == [
+        ConfigKey.DISPLAYS,
+        ConfigKey.USB_DEVICES,
+        ConfigKey.DISPLAYS,
+        ConfigKey.USB_DEVICES,
     ]
 
-    data = {
-        "displays": [
-            {
-                "id": display.id,
-                "name": display.name,
-                "windows_device_id": display.windows_device_id,
-                "inputs": [
-                    {
-                        "input_id": input_.input_id,
-                        "input_type": input_.input_type.value,
-                    }
-                    for input_ in display.inputs
-                ],
-            }
-            for display in displays
-        ]
-    }
-
-    config_path.write_text(
-        json.dumps(data, indent=4),
-        encoding="utf-8",
+    saved_data = json.loads(
+        (tmp_path / "config.json").read_text(encoding="utf-8")
     )
-
-    repository = ConfigRepository(path=config_path)
-
-    loaded_displays = repository.load_displays()
-
-    assert loaded_displays == displays
+    assert saved_data["displays"] == []
+    assert saved_data["usb_devices"] == []
 
 
-def test_save_displays(tmp_path):
+def test_add_config_rejects_wrong_types_and_duplicate_ids(tmp_path):
+    repository = ConfigRepository(tmp_path / "config.json")
+    repository.add_config(ConfigKey.DISPLAYS, make_display())
+
+    with pytest.raises(TypeError, match="Display objects"):
+        repository.add_config(ConfigKey.DISPLAYS, make_usb_device())
+    with pytest.raises(ValueError, match="already contains"):
+        repository.add_config(ConfigKey.DISPLAYS, make_display())
+
+
+def test_update_config_persists_values_and_returns_isolated_copies(tmp_path):
     config_path = tmp_path / "config.json"
+    repository = ConfigRepository(config_path)
+    automations = [make_automation()]
+    repository.update_config(ConfigKey.AUTOMATIONS, automations)
+    repository.update_config(ConfigKey.ACTIVITY_DAYS, 7)
+    repository.update_config(ConfigKey.STORE_ACTIVITY_LOGS, False)
+    repository.update_config(ConfigKey.USB_MONITOR_ENABLED, False)
+    repository.update_config(ConfigKey.USB_MONITOR_INTERVAL_MS, 1250)
 
-    displays = [
-        Display(
-            id="display1",
-            name="Test Display",
-            windows_device_id="DISPLAY\\TEST",
-            inputs=[
-                DisplayInput(
-                    input_id="HDMI1",
-                    input_type=InputType.HDMI,
-                )
-            ],
-        )
-    ]
+    returned_automations = repository.get_config(ConfigKey.AUTOMATIONS)
+    returned_automations.clear()
 
-    repository = ConfigRepository(path=config_path)
-
-    repository.save_displays(displays)
-
-    data = json.loads(config_path.read_text(encoding="utf-8"))
-
-    assert data["displays"] == [
-        {
-            "id": display.id,
-            "name": display.name,
-            "windows_device_id": display.windows_device_id,
-            "inputs": [
-                {
-                    "input_id": input_.input_id,
-                    "input_type": input_.input_type.value,
-                }
-                for input_ in display.inputs
-            ],
-        }
-        for display in displays
-    ]
+    reloaded = ConfigRepository(config_path)
+    assert reloaded.get_config(ConfigKey.AUTOMATIONS) == [make_automation()]
+    assert reloaded.get_config(ConfigKey.ACTIVITY_DAYS) == 7
+    assert reloaded.get_config(ConfigKey.STORE_ACTIVITY_LOGS) is False
+    assert reloaded.get_config(ConfigKey.USB_MONITOR_ENABLED) is False
+    assert reloaded.get_config(ConfigKey.USB_MONITOR_INTERVAL_MS) == 1250
 
 
-def test_activity_days_default_to_30_and_persist_selection(tmp_path):
-    config_path = tmp_path / "config.json"
-    repository = ConfigRepository(path=config_path)
-
-    assert repository.load_activity_days() == 30
-
-    repository.save_activity_days(7)
-    reloaded_repository = ConfigRepository(path=config_path)
-
-    assert reloaded_repository.load_activity_days() == 7
-    data = json.loads(config_path.read_text(encoding="utf-8"))
-    assert data["settings"] == {
-        "activity_days": 7,
-        "store_activity_logs": True,
-        "usb_monitor_enabled": True,
-        "usb_monitor_interval_ms": 500,
-    }
-    assert "activity_days" not in data
-
-
-def test_activity_days_can_persist_all_activity(tmp_path):
-    config_path = tmp_path / "config.json"
-    repository = ConfigRepository(path=config_path)
-
-    repository.save_activity_days(None)
-
-    assert ConfigRepository(path=config_path).load_activity_days() is None
-
-
-def test_legacy_activity_days_are_migrated_into_settings(tmp_path):
+def test_settings_default_values_and_legacy_migration(tmp_path):
     config_path = tmp_path / "config.json"
     config_path.write_text(
         json.dumps({"activity_days": 7, "other_setting": "keep"}),
         encoding="utf-8",
     )
-    repository = ConfigRepository(path=config_path)
+    repository = ConfigRepository(config_path)
 
-    assert repository.load_activity_days() == 7
+    assert repository.get_config(ConfigKey.ACTIVITY_DAYS) == 7
+    assert repository.get_config(ConfigKey.STORE_ACTIVITY_LOGS) is True
+    assert repository.get_config(ConfigKey.USB_MONITOR_ENABLED) is True
+    assert repository.get_config(ConfigKey.USB_MONITOR_INTERVAL_MS) == 500
+
+    repository.update_config(ConfigKey.ACTIVITY_DAYS, 30)
     data = json.loads(config_path.read_text(encoding="utf-8"))
-    assert data == {
-        "other_setting": "keep",
-        "settings": {
-            "activity_days": 7,
-            "store_activity_logs": True,
-            "usb_monitor_enabled": True,
-            "usb_monitor_interval_ms": 500,
-        },
+    assert data["settings"] == {
+        "activity_days": 30,
+        "store_activity_logs": True,
+        "usb_monitor_enabled": True,
+        "usb_monitor_interval_ms": 500,
     }
+    assert data["other_setting"] == "keep"
+    assert "activity_days" not in data
 
 
-def test_store_activity_logs_default_and_persist(tmp_path):
+def test_activity_days_can_be_none(tmp_path):
+    repository = ConfigRepository(tmp_path / "config.json")
+    repository.update_config(ConfigKey.ACTIVITY_DAYS, None)
+
+    assert repository.get_config(ConfigKey.ACTIVITY_DAYS) is None
+
+
+def test_invalid_config_types_are_rejected(tmp_path):
     config_path = tmp_path / "config.json"
-    repository = ConfigRepository(path=config_path)
+    config_path.write_text(
+        json.dumps({"settings": {"usb_monitor_enabled": "yes"}}),
+        encoding="utf-8",
+    )
 
-    assert repository.load_store_activity_logs() is True
-    repository.save_store_activity_logs(False)
-
-    assert ConfigRepository(path=config_path).load_store_activity_logs() is False
-
-
-def test_usb_monitor_settings_default_and_persist(tmp_path):
-    config_path = tmp_path / "config.json"
-    repository = ConfigRepository(path=config_path)
-
-    assert repository.load_usb_monitor_enabled() is True
-    assert repository.load_usb_monitor_interval_ms() == 500
-
-    repository.save_usb_monitor_enabled(False)
-    repository.save_usb_monitor_interval_ms(1250)
-    reloaded_repository = ConfigRepository(path=config_path)
-
-    assert reloaded_repository.load_usb_monitor_enabled() is False
-    assert reloaded_repository.load_usb_monitor_interval_ms() == 1250
-    data = json.loads(config_path.read_text(encoding="utf-8"))
-    assert data["settings"]["usb_monitor_enabled"] is False
-    assert data["settings"]["usb_monitor_interval_ms"] == 1250
+    with pytest.raises(ValueError, match="must be a boolean"):
+        ConfigRepository(config_path).get_config(
+            ConfigKey.USB_MONITOR_ENABLED
+        )
 
 
-def test_usb_monitor_interval_rejects_non_positive_values(tmp_path):
-    repository = ConfigRepository(path=tmp_path / "config.json")
+def test_usb_monitor_interval_requires_positive_integer(tmp_path):
+    repository = ConfigRepository(tmp_path / "config.json")
 
     with pytest.raises(ValueError, match="polling interval"):
-        repository.save_usb_monitor_interval_ms(0)
+        repository.update_config(ConfigKey.USB_MONITOR_INTERVAL_MS, 0)
+    with pytest.raises(ValueError, match="polling interval"):
+        repository.update_config(ConfigKey.USB_MONITOR_INTERVAL_MS, True)
+
+
+def test_invalid_json_is_reported(tmp_path):
+    config_path = tmp_path / "config.json"
+    config_path.write_text("{", encoding="utf-8")
+
+    with pytest.raises(json.JSONDecodeError):
+        ConfigRepository(config_path).get_config(ConfigKey.DISPLAYS)

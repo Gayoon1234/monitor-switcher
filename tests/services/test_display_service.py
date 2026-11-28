@@ -1,3 +1,5 @@
+from app.events import EventHook
+from app.models.config import ConfigKey
 from app.models.display import Display, DisplayInput, InputType
 from app.services.display_service import DisplayService
 
@@ -6,12 +8,17 @@ class FakeDisplayRepository:
     def __init__(self, displays=None):
         self.displays = displays or []
         self.saved_displays = []
+        self.config_changed = EventHook()
 
-    def load_displays(self):
+    def get_config(self, key):
+        assert key is ConfigKey.DISPLAYS
         return list(self.displays)
 
-    def save_displays(self, displays):
+    def update_config(self, key, displays):
+        assert key is ConfigKey.DISPLAYS
+        self.displays = list(displays)
         self.saved_displays.append(list(displays))
+        self.config_changed.emit(key)
 
 
 class FakeDisplayDiscovery:
@@ -233,3 +240,17 @@ def test_switch_input_unknown_display_raises_error():
         raise AssertionError("Expected ValueError")
 
     assert controller.switch_input_calls == []
+
+
+def test_external_display_config_update_refreshes_service_and_controller():
+    initial_display = create_display(display_id="display-001")
+    updated_display = create_display(display_id="display-002")
+    service, repository, _, controller = create_service(
+        repository_displays=[initial_display],
+    )
+    controller.set_displays_calls.clear()
+
+    repository.update_config(ConfigKey.DISPLAYS, [updated_display])
+
+    assert service.get_displays() == [updated_display]
+    assert controller.set_displays_calls == [[updated_display]]

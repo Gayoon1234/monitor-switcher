@@ -1,4 +1,5 @@
 from app.hardware.monitor import DisplayDiscovery, MonitorController
+from app.models.config import ConfigKey
 from app.models.display import Display
 from app.services.config_repository import ConfigRepository
 
@@ -17,16 +18,19 @@ class DisplayService:
         self.displays: list[Display] = []
         self._display_by_id: dict[str, Display] = {}
 
-        self.displays = self.repository.load_displays()
+        self.displays = self.repository.get_config(ConfigKey.DISPLAYS)
 
         if not self.displays:
             self.displays = self.display_discovery.get_displays()
-            self.repository.save_displays(self.displays)
+            self.repository.update_config(ConfigKey.DISPLAYS, self.displays)
         else:
             self._refresh_current_inputs()
 
         self._rebuild_display_lookup()
         self.monitor_controller.set_displays(self.displays)
+        self._unsubscribe_config = self.repository.config_changed.subscribe(
+            self._on_config_changed
+        )
 
     def get_displays(self) -> list[Display]:
         return self.displays
@@ -35,10 +39,7 @@ class DisplayService:
         displays = self.display_discovery.get_displays()
 
         if displays != self.displays:
-            self.repository.save_displays(displays)
-            self.displays = displays
-            self._rebuild_display_lookup()
-            self.monitor_controller.set_displays(self.displays)
+            self.repository.update_config(ConfigKey.DISPLAYS, displays)
 
         return self.displays
 
@@ -81,3 +82,11 @@ class DisplayService:
                 display.current_input = current_inputs[
                     display.windows_device_id
                 ]
+
+    def _on_config_changed(self, key: ConfigKey) -> None:
+        if key is not ConfigKey.DISPLAYS:
+            return
+
+        self.displays = self.repository.get_config(ConfigKey.DISPLAYS)
+        self._rebuild_display_lookup()
+        self.monitor_controller.set_displays(self.displays)

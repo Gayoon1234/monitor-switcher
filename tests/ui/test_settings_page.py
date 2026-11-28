@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from PySide6.QtWidgets import QFrame, QLabel
 
+from app.models.config import ConfigKey
 from app.services.config_repository import ConfigRepository
 from app.services.theme_service import ThemeService
 from app.ui.main_window import MainWindow
@@ -74,7 +75,7 @@ def test_selected_activity_period_is_saved(tmp_path):
 
     MainWindow._set_activity_period(window, 7)
 
-    assert repository.load_activity_days() == 7
+    assert repository.get_config(ConfigKey.ACTIVITY_DAYS) == 7
     assert activity_page.days == 7
 
 
@@ -150,8 +151,7 @@ def test_activity_logging_pause_is_persisted(tmp_path):
 
     MainWindow._set_activity_logging_paused(window, True)
 
-    assert activity_service.activity_logging_paused is True
-    assert repository.load_store_activity_logs() is False
+    assert repository.get_config(ConfigKey.STORE_ACTIVITY_LOGS) is False
 
 
 def test_usb_monitor_settings_emit_changes(tmp_path, qapp):
@@ -204,5 +204,5 @@ def test_usb_monitor_settings_update_service_and_persist(tmp_path):
     MainWindow._set_usb_monitor_enabled(window, True)
 
     assert calls == [("stop",), ("interval", 250), ("start", 250)]
-    assert repository.load_usb_monitor_enabled() is True
-    assert repository.load_usb_monitor_interval_ms() == 250
+    assert repository.get_config(ConfigKey.USB_MONITOR_ENABLED) is True
+    assert repository.get_config(ConfigKey.USB_MONITOR_INTERVAL_MS) == 250

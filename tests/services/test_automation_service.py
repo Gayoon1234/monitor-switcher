@@ -1,3 +1,4 @@
+from app.events import EventHook
 from app.models.activity_event import ActivityEvent
 from app.models.automation import (
     Action,
@@ -6,6 +7,7 @@ from app.models.automation import (
     Trigger,
     TriggerType,
 )
+from app.models.config import ConfigKey
 from app.models.device_event import DeviceEvent, DeviceEventType
 from app.services.automation_service import AutomationService
 
@@ -39,16 +41,40 @@ class FakeActivityRepository:
         return list(self.events)
 
 
+class FakeConfigRepository:
+    def __init__(self, automations, store_activity_logs=True):
+        self.automations = list(automations)
+        self.store_activity_logs = store_activity_logs
+        self.config_changed = EventHook()
+
+    def get_config(self, key):
+        if key is ConfigKey.AUTOMATIONS:
+            return list(self.automations)
+        if key is ConfigKey.STORE_ACTIVITY_LOGS:
+            return self.store_activity_logs
+        raise AssertionError(f"Unexpected config key: {key}")
+
+    def update_config(self, key, value):
+        if key is ConfigKey.AUTOMATIONS:
+            self.automations = list(value)
+        elif key is ConfigKey.STORE_ACTIVITY_LOGS:
+            self.store_activity_logs = value
+        else:
+            raise AssertionError(f"Unexpected config key: {key}")
+        self.config_changed.emit(key)
+
+
 def create_automation_service(
     automations: list[Automation],
 ) -> tuple[AutomationService, FakeDisplayService, FakeActivityRepository]:
     display_service = FakeDisplayService()
     activity_repository = FakeActivityRepository()
+    config_repository = FakeConfigRepository(automations)
 
     service = AutomationService(
         display_service=display_service,
         activity_repository=activity_repository,
-        automations=automations,
+        config_repository=config_repository,
     )
 
     return service, display_service, activity_repository
@@ -367,7 +393,7 @@ def test_failed_action_does_not_prevent_later_actions():
     service = AutomationService(
         display_service=display_service,
         activity_repository=repository,
-        automations=[automation],
+        config_repository=FakeConfigRepository([automation]),
     )
 
     service.handle_device_event(
@@ -433,8 +459,10 @@ def test_activity_logging_can_start_disabled():
     service = AutomationService(
         display_service=FakeDisplayService(),
         activity_repository=repository,
-        automations=[],
-        store_activity_logs=False,
+        config_repository=FakeConfigRepository(
+            [],
+            store_activity_logs=False,
+        ),
     )
 
     service.handle_device_event(
@@ -445,3 +473,22 @@ def test_activity_logging_can_start_disabled():
     )
 
     assert repository.events == []
+
+
+def test_config_changes_update_automations_and_activity_logging():
+    initial_automation = create_automation(name="Initial")
+    service, _, _ = create_automation_service([initial_automation])
+    replacement_automation = create_automation(name="Replacement")
+
+    service.config_repository.update_config(
+        ConfigKey.AUTOMATIONS,
+        [replacement_automation],
+    )
+    service.config_repository.update_config(
+        ConfigKey.STORE_ACTIVITY_LOGS,
+        False,
+    )
+
+    assert service.automations == [replacement_automation]
+    assert service.activity_logging_paused is True
+    service.close()
