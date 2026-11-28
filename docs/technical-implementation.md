@@ -165,6 +165,28 @@ sequenceDiagram
 
 ```mermaid
 classDiagram
+    class AppConfig {
+        +list~Automation~ automations
+        +list~Display~ displays
+        +list~ConfiguredUsbDevice~ usb_devices
+        +AppSettings settings
+    }
+
+    class AppSettings {
+        +int activity_days
+        +bool store_activity_logs
+        +bool usb_monitor_enabled
+        +int usb_monitor_interval_ms
+    }
+
+    class ConfigKey {
+        <<enumeration>>
+        AUTOMATIONS
+        DISPLAYS
+        USB_DEVICES
+        SETTINGS
+    }
+
     class Display {
         +str id
         +str name
@@ -220,6 +242,11 @@ classDiagram
         +bool success
     }
 
+    AppConfig "1" *-- "many" Automation : automations
+    AppConfig "1" *-- "many" Display : displays
+    AppConfig "1" *-- "many" ConfiguredUsbDevice : usb_devices
+    AppConfig "1" *-- "1" AppSettings : settings
+    ConfigKey ..> AppConfig : selects a section
     Display "1" *-- "many" DisplayInput
     Automation "1" *-- "1" Trigger
     Automation "1" *-- "many" Action
